@@ -37,7 +37,6 @@ def process_seqs(fname, genes, prots):
 
     seqs, phospho = [], []
     for gene, prot in zip(genes, prots):
-        #print(gene, prot)
 
         # Handle phosphorylation.
         if prot.endswith('-phosphorylated'):
@@ -99,13 +98,20 @@ def process_seqs(fname, genes, prots):
             seqs.append(gene2seq[prot])
 
         else:
-            if '-' in prot:
-                print(prot)
             seqs.append(gene2seq[gene])
 
-        return seqs
+    assert(len(genes) == len(seqs))
+
+    return seqs
 
 if __name__ == '__main__':
     _, _, genes, prots = load_kds('data/davis2011kinase/nbt.1990-S4.csv')
 
     seqs = process_seqs('data/davis2011kinase/uniprot_sequences.fasta', genes, prots)
+
+    for gene, prot, seq in zip(genes, prots, seqs):
+        print('>{}'.format(prot))
+        if prot.startswith('CDK4-'):
+            print('\n'.join(seq))
+        else:
+            print(seq)

@@ -1,8 +1,9 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import random
-from rdkit import Chem
-from rdkit.Chem import AllChem
-import re
+import seaborn as sns
+
+from utils import mkdir_p
 
 np.random.seed(0)
 random.seed(0)
@@ -20,27 +21,31 @@ def load_kds(fname):
             Kds.append([ float(field) if field != '' else 10000.
                        for field in fields[3:] ])
 
-    return np.array(Kds), chems, genes, prots
-
-def fingerprint(chem_smile):
-    molecule = Chem.MolFromSmiles(chem_smile)
-    # Morgan fingerprint with radius 2 equivalent to ECFP4.
-    return list(AllChem.GetMorganFingerprintAsBitVect(molecule, 2, nBits=1024))
+    return np.array(Kds).T, chems, genes, prots
 
 def featurize_chems(fname, chems):
-    chems = set([ chem.lower() for chem in chems ])
     chem2feature = {}
     with open(fname) as f:
         for line in f:
-            fields = line.rstrip().split(',')
-            new_chem = fields[0].lower()
-            if new_chem in chems:
-                chem2feature[new_chem] = fingerprint(fields[-1])
-    assert(set(chem2feature.keys()) == set(chems))
+            if line.startswith('>'):
+                name = line[1:].rstrip()
+                chem2feature[name] = [
+                    int(field) for field in f.readline().rstrip().split()
+                ]
+    assert(len(set(chems) - set(chem2feature.keys())) == 0)
     return chem2feature
 
-def featurize_prots():
-    pass
+def featurize_prots(fname, prots):
+    prot2feature = {}
+    with open(fname) as f:
+        for line in f:
+            if line.startswith('>'):
+                name = line[1:].rstrip()
+                prot2feature[name] = [
+                    float(field) for field in f.readline().rstrip().split()
+                ]
+    assert(len(set(prots) - set(prot2feature.keys())) == 0)
+    return prot2feature
 
 def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
     prots = np.array(prots)
@@ -60,25 +65,28 @@ def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
 
     idx_train, idx_test = [], []
 
-    chem_idxs = random.shuffle(list(range(len(chems))))
+    chem_idxs = list(range(len(chems)))
+    random.shuffle(chem_idxs)
 
-    for chem_idx, i in enumerate(chem_idxs):
-        if chem_idx % 3 == 0:
+    for pos, i in enumerate(chem_idxs):
+        if pos % 3 == 0:
             [ idx_train.append((i, j)) for j in range(len(prots)) ]
-        elif chem_idx % 3 == 1:
+        elif pos % 3 == 1:
             [ idx_train.append((i, j)) for j in prot_idx_train ]
             [ idx_test.append((i, j)) for j in prot_idx_test ]
         else:
             [ idx_test.append((i, j)) for j in range(len(prots)) ]
 
-    X_train = []
+    assert(len(set(idx_train) & set(idx_test)) == 0)
+
+    X_train, y_train = [], []
     for i, j in idx_train:
         chem = chems[i]
         prot = prots[j]
         X_train.append(chem2feature[chem] + prot2feature[prot])
         y_train.append(Kds[i, j])
 
-    X_test = []
+    X_test, y_test = [], []
     for i, j in idx_test:
         chem = chems[i]
         prot = prots[j]
@@ -87,12 +95,61 @@ def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
 
     return X_train, y_train, idx_train, X_test, y_test, idx_test
 
-if __name__ == '__main__':
+def visualize_heatmap(chem_prot, suffix=''):
+    plt.figure()
+    cmap = sns.diverging_palette(220, 10, as_cmap=True)
+    sns.heatmap(chem_prot, cmap=cmap)
+    mkdir_p('figures/')
+    if suffix == '':
+        plt.savefig('figures/heatmap.png', dpi=300)
+    else:
+        plt.savefig('figures/heatmap_{}.png'.format(suffix), dpi=300)
+    plt.close()
+
+def process():
     Kds, chems, genes, prots = load_kds('data/davis2011kinase/nbt.1990-S4.csv')
 
-    chem2feature = featurize_chems('data/davis2011kinase/chem_smiles.csv', chems)
-    #prot2feature = featurize_prots('data/davis2011kinase/uniprot_sequences.fasta', genes, prots)
+    visualize_heatmap(np.log10(10000 - Kds + 1), 'logKd')
 
-    X_train, y_train, idx_train, X_test, y_test, idx_test = split_data(
+    chem2feature = featurize_chems(
+        'data/davis2011kinase/chem_fingerprints.txt', chems
+    )
+    prot2feature = featurize_prots(
+        'data/davis2011kinase/prot_embeddings.txt', prots
+    )
+    X_obs, y_obs, idx_obs, X_unk, y_unk, idx_unk = split_data(
         Kds, chems, genes, prots, chem2feature, prot2feature
     )
+
+    process_data = {
+        'Kds': Kds,
+        'chems': chems,
+        'genes': genes,
+        'prots': prots,
+        'X_obs': X_obs,
+        'y_obs': y_obs,
+        'idx_obs': idx_obs,
+        'X_unk': X_unk,
+        'y_unk': y_unk,
+        'idx_unk': idx_unk,
+    }
+
+    return process_data
+
+
+if __name__ == '__main__':
+    process_data = process()
+
+    Kds = process_data['Kds']
+    idx_obs = process_data['idx_obs']
+    idx_unk = process_data['idx_unk']
+
+    n_chems = max([ idx[0] for idx in idx_obs ] +
+                  [ idx[0] for idx in idx_unk]) + 1
+    n_prots = max([ idx[1] for idx in idx_obs ] +
+                  [ idx[1] for idx in idx_unk]) + 1
+
+    obs_unk = np.zeros(Kds.shape)
+    for i, j in idx_unk:
+        obs_unk[i, j] = 1.
+    visualize_heatmap(obs_unk, 'obs_unk')
