@@ -36,7 +36,7 @@ def mlp_ensemble(n_neurons=500, n_regressors=5):
         solvers='adam',
         alphas=0.0001,
         batch_sizes=500,
-        max_iters=3000,
+        max_iters=8000,
         momentums=0.9,
         nesterovs_momentums=True,
         backend='keras',
@@ -72,6 +72,7 @@ def error_var_scatter(y_pred, y, var_pred, n_regressors, prefix=''):
     plt.scatter(np.power(y_pred - y, 2), var_pred, alpha=0.3,
                 c=((y - y.min()) / (y.max() - y.min())))
     plt.viridis()
+    plt.yscale('log')
     plt.xlabel('Squared Error')
     plt.ylabel('Variance')
     plt.savefig('figures/variance_vs_mse_{}regressors{}.png'
@@ -82,6 +83,7 @@ def score_var_scatter(y, var, n_regressors, prefix=''):
     # Plot error vs. variance.
     plt.figure()
     plt.scatter(y, var, alpha=0.2)
+    plt.yscale('log')
     plt.xlabel('Predicted Kd')
     plt.ylabel('Variance')
     plt.savefig('figures/variance_vs_score_{}regressors{}.png'
@@ -97,6 +99,11 @@ def train(**kwargs):
     idx_unk = kwargs['idx_unk']
     Kds = kwargs['Kds']
 
+    X_obs = X_obs[y_obs > 0]
+    y_obs = y_obs[y_obs > 0]
+    X_unk = X_unk[y_unk > 0]
+    y_unk = y_unk[y_unk > 0]
+
     n_chems, n_prots = Kds.shape
 
     n_regressors = 5
@@ -104,7 +111,7 @@ def train(**kwargs):
     if n_regressors == 'diverse1':
         mlper = mlp_ensemble_diverse1()
     else:
-        mlper = mlp_ensemble(n_neurons=250, n_regressors=n_regressors)
+        mlper = mlp_ensemble(n_neurons=500, n_regressors=n_regressors)
     mlper.fit(X_obs, y_obs)
 
     # Analyze observed dataset.
@@ -115,8 +122,6 @@ def train(**kwargs):
 
     error_histogram(y_obs_pred, y_obs,
                     n_regressors, 'observed_')
-    #mean_var_heatmap(idx_obs, y_obs_pred, var_obs_pred, Kds,
-    #                 n_regressors, 'observed_')
     error_var_scatter(y_obs_pred, y_obs, var_obs_pred,
                       n_regressors, 'observed_')
     score_var_scatter(y_obs, var_obs_pred,
@@ -130,8 +135,6 @@ def train(**kwargs):
 
     error_histogram(y_unk_pred, y_unk,
                     n_regressors, 'unknown_')
-    #mean_var_heatmap(idx_unk, y_unk_pred, var_unk_pred,
-    #                 Kds, n_regressors, 'unknown_')
     error_var_scatter(y_unk_pred, y_unk, var_unk_pred,
                       n_regressors, 'unknown_')
     score_var_scatter(y_unk, var_unk_pred,

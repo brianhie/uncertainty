@@ -3,22 +3,23 @@ import numpy as np
 import tensorflow as tf
 import keras.backend as K
 
+tf.set_random_seed(0)
+
 def check_param_length(param, n_regressors):
     if len(param) != n_regressors:
         raise ValueError('Invalid parameter list length')
 
 def gaussian_nll(y_true, y_pred):
-    n_dims = int(int(y_pred.shape[1]) / 2.)
-    mu = y_pred[:, :n_dims]
-    log_sigma = y_pred[:, n_dims:]
+    mu = y_pred[:, 0]
+    log_sigma = y_pred[:, 1]
 
-    mse = -0.5 * K.sum(K.square((y_true - mu) / K.exp(log_sigma)), axis=1)
-    sigma_trace = -K.sum(log_sigma, axis=1)
-    log2pi = -0.5 * n_dims * np.log(2 * np.pi)
+    mse = 0.5 * K.square(y_true - mu) / K.exp(log_sigma)
+    sigma_trace = 0.5 * log_sigma
+    log2pi = 0.5 * np.log(2 * np.pi)
 
     log_likelihood = mse + sigma_trace + log2pi
 
-    return K.mean(-log_likelihood)
+    return K.mean(log_likelihood)
 
 class MLPEnsembleRegressor(object):
     def __init__(self,
