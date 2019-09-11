@@ -35,18 +35,8 @@ def process_seqs(fname, genes, prots):
 
     gene2seq = load_sequences(fname)
 
-    seqs, phospho = [], []
+    seqs = []
     for gene, prot in zip(genes, prots):
-
-        # Handle phosphorylation.
-        if prot.endswith('-phosphorylated'):
-            prot = prot.split('-')[0]
-            phospho.append(True)
-        elif prot.endswith('-nonphosphorylated'):
-            prot = prot.split('-')[0]
-            phospho.append(False)
-        else:
-            phospho.append(False)
 
         # Protein has metadata.
         if '(' in prot and ')' in prot:

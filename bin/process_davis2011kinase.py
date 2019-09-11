@@ -18,10 +18,14 @@ def load_kds(fname):
             fields = line.rstrip().split(',')
             genes.append(fields[1])
             prots.append(fields[2])
-            Kds.append([ float(field) if field != '' else 10000.
+            Kds.append([ float(field) if field != '' else 11000.
                        for field in fields[3:] ])
 
-    return np.array(Kds).T, chems, genes, prots
+    Kds = np.array(Kds).T
+    Kds = Kds.max() - Kds
+    #Kds = -np.log10(Kds / Kds.max())
+
+    return Kds, chems, genes, prots
 
 def featurize_chems(fname, chems):
     chem2feature = {}
@@ -37,14 +41,24 @@ def featurize_chems(fname, chems):
 
 def featurize_prots(fname, prots):
     prot2feature = {}
+
     with open(fname) as f:
         for line in f:
             if line.startswith('>'):
                 name = line[1:].rstrip()
+
+                # Handle phosphorylation.
+                if '-phosphorylated' in name:
+                    phospho = 1
+                else:
+                    phospho = 0
+
                 prot2feature[name] = [
                     float(field) for field in f.readline().rstrip().split()
-                ]
+                ] + [ phospho ]
+
     assert(len(set(prots) - set(prot2feature.keys())) == 0)
+
     return prot2feature
 
 def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
@@ -85,6 +99,7 @@ def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
         prot = prots[j]
         X_train.append(chem2feature[chem] + prot2feature[prot])
         y_train.append(Kds[i, j])
+    X_train, y_train = np.array(X_train), np.array(y_train)
 
     X_test, y_test = [], []
     for i, j in idx_test:
@@ -92,6 +107,7 @@ def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
         prot = prots[j]
         X_test.append(chem2feature[chem] + prot2feature[prot])
         y_test.append(Kds[i, j])
+    X_test, y_test = np.array(X_test), np.array(y_test)
 
     return X_train, y_train, idx_train, X_test, y_test, idx_test
 
@@ -109,7 +125,7 @@ def visualize_heatmap(chem_prot, suffix=''):
 def process():
     Kds, chems, genes, prots = load_kds('data/davis2011kinase/nbt.1990-S4.csv')
 
-    visualize_heatmap(np.log10(10000 - Kds + 1), 'logKd')
+    visualize_heatmap(Kds, 'logKd')
 
     chem2feature = featurize_chems(
         'data/davis2011kinase/chem_fingerprints.txt', chems
