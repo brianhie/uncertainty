@@ -9,17 +9,18 @@ def check_param_length(param, n_regressors):
     if len(param) != n_regressors:
         raise ValueError('Invalid parameter list length')
 
-def gaussian_nll(y_true, y_pred):
-    mu = y_pred[:, 0]
-    log_sigma = y_pred[:, 1]
+def gaussian_nll(y_true, y_preds):
+    n_dims = int(int(y_preds.shape[1])/2)
+    mu = tf.minimum(y_preds[:, 0:n_dims], 10000.)
+    logsigma = y_preds[:, n_dims:]
 
-    mse = 0.5 * K.square(y_true - mu) / K.exp(log_sigma)
-    sigma_trace = 0.5 * log_sigma
-    log2pi = 0.5 * np.log(2 * np.pi)
+    mse = -0.5*K.sum(K.square((y_true-mu)/K.exp(logsigma)),axis=1)
+    sigma_trace = -K.sum(logsigma, axis=1)
+    #log2pi = -0.5*n_dims*np.log(2*np.pi)
 
-    log_likelihood = mse + sigma_trace + log2pi
+    log_likelihood = mse+sigma_trace#+log2pi
 
-    return K.mean(log_likelihood)
+    return K.mean(-log_likelihood)
 
 class MLPEnsembleRegressor(object):
     def __init__(self,
@@ -174,7 +175,8 @@ class MLPEnsembleRegressor(object):
             assert(pred.shape[2] == 2)
 
             pred_mean = pred[:, :, 0]
-            pred_sdev = np.exp(pred[:, :, 1])
+            pred_sdev = pred[:, :, 1]
+            #pred_sdev = np.exp(pred[:, :, 1])
 
             ys = pred_mean.mean(0)
             self.uncertainties_ = (

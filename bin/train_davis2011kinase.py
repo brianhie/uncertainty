@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+from gaussian_process import SparseGPRegressor
 from mlp_ensemble import MLPEnsembleRegressor
 from process_davis2011kinase import process, visualize_heatmap
 
@@ -45,49 +46,67 @@ def mlp_ensemble(n_neurons=500, n_regressors=5):
 
     return mlper
 
-def error_histogram(y_pred, y, n_regressors, prefix=''):
+def error_histogram(y_pred, y, regress_type, prefix=''):
     # Histogram of squared errors.
     plt.figure()
     plt.hist(np.power(y_pred - y, 2), bins=50)
     plt.xlabel('Squared Error')
     plt.savefig('figures/mse_histogram_{}regressors{}.png'
-                .format(prefix, n_regressors))
+                .format(prefix, regress_type))
     plt.close()
 
-def mean_var_heatmap(idx, y_pred, var_pred, Kds, n_regressors, prefix=''):
+def mean_var_heatmap(idx, y_pred, var_pred, Kds, regress_type, prefix=''):
     means = np.zeros(Kds.shape)
     for idx, mean in zip(idx, y_pred):
         means[idx] = mean
     visualize_heatmap(means,
-                      '{}mean_regressors{}'.format(prefix, n_regressors))
+                      '{}mearegress_type{}'.format(prefix, regress_type))
     variances = np.zeros(Kds.shape)
     for idx, variance in zip(idx, var_pred):
         variances[idx] = variance
     visualize_heatmap(variances,
-                      '{}variance_regressors{}'.format(prefix, n_regressors))
+                      '{}variance_regressors{}'.format(prefix, regress_type))
 
-def error_var_scatter(y_pred, y, var_pred, n_regressors, prefix=''):
+def error_var_scatter(y_pred, y, var_pred, regress_type, prefix=''):
     # Plot error vs. variance.
     plt.figure()
-    plt.scatter(np.power(y_pred - y, 2), var_pred, alpha=0.3,
-                c=((y - y.min()) / (y.max() - y.min())))
+    plt.scatter(y_pred, var_pred, alpha=0.3, c=y)
     plt.viridis()
-    plt.yscale('log')
-    plt.xlabel('Squared Error')
+    #plt.yscale('log')
+    plt.xlabel('y_pred')
     plt.ylabel('Variance')
-    plt.savefig('figures/variance_vs_mse_{}regressors{}.png'
-                .format(prefix, n_regressors))
+    plt.savefig('figures/variance_vs_pred_{}regressors{}.png'
+                .format(prefix, regress_type))
     plt.close()
 
-def score_var_scatter(y, var, n_regressors, prefix=''):
+    plt.figure()
+    plt.scatter(y_pred - y, var_pred, alpha=0.3, c=y)
+    plt.viridis()
+    #plt.yscale('log')
+    plt.xlabel('y_pred - y_true')
+    plt.ylabel('Variance')
+    plt.savefig('figures/variance_vs_error_{}regressors{}.png'
+                .format(prefix, regress_type))
+    plt.close()
+
+    plt.figure()
+    plt.scatter(y, y_pred, alpha=0.3)
+    plt.xlabel('y')
+    plt.ylabel('y_pred')
+    plt.savefig('figures/true_vs_pred_{}regressors{}.png'
+                .format(prefix, regress_type))
+    plt.close()
+
+
+def score_var_scatter(y, var, regress_type, prefix=''):
     # Plot error vs. variance.
     plt.figure()
     plt.scatter(y, var, alpha=0.2)
-    plt.yscale('log')
+    #plt.yscale('log')
     plt.xlabel('Predicted Kd')
     plt.ylabel('Variance')
     plt.savefig('figures/variance_vs_score_{}regressors{}.png'
-                .format(prefix, n_regressors))
+                .format(prefix, regress_type))
     plt.close()
 
 def train(**kwargs):
@@ -101,44 +120,59 @@ def train(**kwargs):
 
     X_obs = X_obs[y_obs > 0]
     y_obs = y_obs[y_obs > 0]
-    X_unk = X_unk[y_unk > 0]
-    y_unk = y_unk[y_unk > 0]
+
+    # Balance the training set.
+    #positive_idx = y_obs > 0
+    #zero_idx = y_obs == 0
+    #if sum(zero_idx) > sum(positive_idx):
+    #    balanced_idx = list(sorted(np.hstack((
+    #        np.where(positive_idx)[0],
+    #        np.random.choice(np.where(zero_idx)[0], sum(positive_idx), replace=False)
+    #    ))))
+    #    X_obs = X_obs[balanced_idx]
+    #    y_obs = y_obs[balanced_idx]
+
+    # Fit the model.
 
     n_chems, n_prots = Kds.shape
 
-    n_regressors = 5
+    regress_type = 'sparsegp'
 
-    if n_regressors == 'diverse1':
-        mlper = mlp_ensemble_diverse1()
+    if regress_type == 'diverse1':
+        regressor = mlp_ensemble_diverse1()
+    elif regress_type == 'mlper5':
+        regressor = mlp_ensemble(n_neurons=200, regress_type=5)
     else:
-        mlper = mlp_ensemble(n_neurons=500, n_regressors=n_regressors)
-    mlper.fit(X_obs, y_obs)
+        regressor = SparseGPRegressor(n_inducing=100)
+    regressor.fit(X_obs, y_obs)
 
     # Analyze observed dataset.
 
-    y_obs_pred = mlper.predict(X_obs)
-    var_obs_pred = mlper.uncertainties_
+    y_obs_pred = regressor.predict(X_obs)
+    var_obs_pred = regressor.uncertainties_
     assert(len(y_obs_pred) == len(var_obs_pred) == X_obs.shape[0])
 
     error_histogram(y_obs_pred, y_obs,
-                    n_regressors, 'observed_')
+                    regress_type, 'observed_')
     error_var_scatter(y_obs_pred, y_obs, var_obs_pred,
-                      n_regressors, 'observed_')
+                      regress_type, 'observed_')
     score_var_scatter(y_obs, var_obs_pred,
-                     n_regressors, 'observed_')
+                     regress_type, 'observed_')
 
     # Analyze unknown dataset.
 
-    y_unk_pred = mlper.predict(X_unk)
-    var_unk_pred = mlper.uncertainties_
+    y_unk_pred = regressor.predict(X_unk)
+    var_unk_pred = regressor.uncertainties_
     assert(len(y_unk_pred) == len(var_unk_pred) == X_unk.shape[0])
 
+    print(sorted(set(var_unk_pred)))
+
     error_histogram(y_unk_pred, y_unk,
-                    n_regressors, 'unknown_')
+                    regress_type, 'unknown_')
     error_var_scatter(y_unk_pred, y_unk, var_unk_pred,
-                      n_regressors, 'unknown_')
+                      regress_type, 'unknown_')
     score_var_scatter(y_unk, var_unk_pred,
-                     n_regressors, 'unknown_')
+                     regress_type, 'unknown_')
 
 if __name__ == '__main__':
     train(**process())

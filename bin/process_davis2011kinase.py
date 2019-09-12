@@ -18,7 +18,7 @@ def load_kds(fname):
             fields = line.rstrip().split(',')
             genes.append(fields[1])
             prots.append(fields[2])
-            Kds.append([ float(field) if field != '' else 11000.
+            Kds.append([ float(field) if field != '' else 10000.
                        for field in fields[3:] ])
 
     Kds = np.array(Kds).T
