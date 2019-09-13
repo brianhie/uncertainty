@@ -83,9 +83,9 @@ def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
     random.shuffle(chem_idxs)
 
     for pos, i in enumerate(chem_idxs):
-        if pos % 3 == 0:
+        if pos % 4 == 0:
             [ idx_train.append((i, j)) for j in range(len(prots)) ]
-        elif pos % 3 == 1:
+        elif pos % 4 == 1:
             [ idx_train.append((i, j)) for j in prot_idx_train ]
             [ idx_test.append((i, j)) for j in prot_idx_test ]
         else:

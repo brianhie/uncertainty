@@ -3,10 +3,12 @@ import numpy as np
 import seaborn as sns
 
 from gaussian_process import SparseGPRegressor
-from mlp_ensemble import MLPEnsembleRegressor
+from hybrid import HybridMLPEnsembleGP
 from process_davis2011kinase import process, visualize_heatmap
 
 def mlp_ensemble_diverse1():
+    from mlp_ensemble import MLPEnsembleRegressor
+
     layer_sizes_list = [ (500, 500) for _ in range(40) ]
 
     max_iters = [ 500 for _ in range(40) ]
@@ -27,6 +29,8 @@ def mlp_ensemble_diverse1():
     return mlper
 
 def mlp_ensemble(n_neurons=500, n_regressors=5):
+    from mlp_ensemble import MLPEnsembleRegressor
+
     layer_sizes_list = []
     for i in range(n_regressors):
         layer_sizes_list.append((500, 500))
@@ -35,9 +39,9 @@ def mlp_ensemble(n_neurons=500, n_regressors=5):
         layer_sizes_list,
         activations='relu',
         solvers='adam',
-        alphas=0.0001,
+        alphas=0.1,
         batch_sizes=500,
-        max_iters=8000,
+        max_iters=15000,
         momentums=0.9,
         nesterovs_momentums=True,
         backend='keras',
@@ -52,7 +56,7 @@ def error_histogram(y_pred, y, regress_type, prefix=''):
     plt.hist(np.power(y_pred - y, 2), bins=50)
     plt.xlabel('Squared Error')
     plt.savefig('figures/mse_histogram_{}regressors{}.png'
-                .format(prefix, regress_type))
+                .format(prefix, regress_type), dpi=200)
     plt.close()
 
 def mean_var_heatmap(idx, y_pred, var_pred, Kds, regress_type, prefix=''):
@@ -67,46 +71,33 @@ def mean_var_heatmap(idx, y_pred, var_pred, Kds, regress_type, prefix=''):
     visualize_heatmap(variances,
                       '{}variance_regressors{}'.format(prefix, regress_type))
 
-def error_var_scatter(y_pred, y, var_pred, regress_type, prefix=''):
-    # Plot error vs. variance.
-    plt.figure()
-    plt.scatter(y_pred, var_pred, alpha=0.3, c=y)
-    plt.viridis()
-    #plt.yscale('log')
-    plt.xlabel('y_pred')
-    plt.ylabel('Variance')
-    plt.savefig('figures/variance_vs_pred_{}regressors{}.png'
-                .format(prefix, regress_type))
-    plt.close()
-
-    plt.figure()
-    plt.scatter(y_pred - y, var_pred, alpha=0.3, c=y)
-    plt.viridis()
-    #plt.yscale('log')
-    plt.xlabel('y_pred - y_true')
-    plt.ylabel('Variance')
-    plt.savefig('figures/variance_vs_error_{}regressors{}.png'
-                .format(prefix, regress_type))
-    plt.close()
-
+def score_scatter(y_pred, y, var_pred, regress_type, prefix=''):
     plt.figure()
     plt.scatter(y, y_pred, alpha=0.3)
-    plt.xlabel('y')
-    plt.ylabel('y_pred')
-    plt.savefig('figures/true_vs_pred_{}regressors{}.png'
-                .format(prefix, regress_type))
+    plt.xlabel('Real score')
+    plt.ylabel('Predicted score')
+    plt.savefig('figures/pred_vs_true_{}regressors{}.png'
+                .format(prefix, regress_type), dpi=200)
     plt.close()
 
-
-def score_var_scatter(y, var, regress_type, prefix=''):
-    # Plot error vs. variance.
     plt.figure()
-    plt.scatter(y, var, alpha=0.2)
-    #plt.yscale('log')
-    plt.xlabel('Predicted Kd')
+    plt.scatter(y_pred, var_pred, alpha=0.3,
+                c=(y - y.min()) / (y.max() - y.min()))
+    plt.viridis()
+    plt.xlabel('Predicted score')
     plt.ylabel('Variance')
-    plt.savefig('figures/variance_vs_score_{}regressors{}.png'
-                .format(prefix, regress_type))
+    plt.savefig('figures/variance_vs_pred_{}regressors{}.png'
+                .format(prefix, regress_type), dpi=200)
+    plt.close()
+
+    plt.figure()
+    plt.scatter(y, var_pred, alpha=0.3,
+                c=(y_pred - y_pred.min()) / (y_pred.max() - y_pred.min()))
+    plt.viridis()
+    plt.xlabel('Real score')
+    plt.ylabel('Variance')
+    plt.savefig('figures/variance_vs_true_{}regressors{}.png'
+                .format(prefix, regress_type), dpi=200)
     plt.close()
 
 def train(**kwargs):
@@ -117,9 +108,6 @@ def train(**kwargs):
     y_unk = kwargs['y_unk']
     idx_unk = kwargs['idx_unk']
     Kds = kwargs['Kds']
-
-    X_obs = X_obs[y_obs > 0]
-    y_obs = y_obs[y_obs > 0]
 
     # Balance the training set.
     #positive_idx = y_obs > 0
@@ -136,14 +124,26 @@ def train(**kwargs):
 
     n_chems, n_prots = Kds.shape
 
-    regress_type = 'sparsegp'
+    regress_type = 'hybrid'
 
     if regress_type == 'diverse1':
         regressor = mlp_ensemble_diverse1()
+    elif regress_type == 'mlper1':
+        regressor = mlp_ensemble(n_neurons=200, n_regressors=1)
     elif regress_type == 'mlper5':
-        regressor = mlp_ensemble(n_neurons=200, regress_type=5)
-    else:
-        regressor = SparseGPRegressor(n_inducing=100)
+        regressor = mlp_ensemble(n_neurons=200, n_regressors=5)
+
+    elif regress_type == 'gp':
+        regressor = SparseGPRegressor(backend='sklearn', verbose=True)
+    elif regress_type == 'sparsegp':
+        regressor = SparseGPRegressor(backend='gpy', verbose=True)
+
+    elif regress_type == 'hybrid':
+        regressor = HybridMLPEnsembleGP(
+            mlp_ensemble(n_neurons=200, n_regressors=5),
+            SparseGPRegressor(backend='sklearn', verbose=True),
+        )
+
     regressor.fit(X_obs, y_obs)
 
     # Analyze observed dataset.
@@ -154,10 +154,8 @@ def train(**kwargs):
 
     error_histogram(y_obs_pred, y_obs,
                     regress_type, 'observed_')
-    error_var_scatter(y_obs_pred, y_obs, var_obs_pred,
-                      regress_type, 'observed_')
-    score_var_scatter(y_obs, var_obs_pred,
-                     regress_type, 'observed_')
+    score_scatter(y_obs_pred, y_obs, var_obs_pred,
+                  regress_type, 'observed_')
 
     # Analyze unknown dataset.
 
@@ -165,14 +163,10 @@ def train(**kwargs):
     var_unk_pred = regressor.uncertainties_
     assert(len(y_unk_pred) == len(var_unk_pred) == X_unk.shape[0])
 
-    print(sorted(set(var_unk_pred)))
-
     error_histogram(y_unk_pred, y_unk,
                     regress_type, 'unknown_')
-    error_var_scatter(y_unk_pred, y_unk, var_unk_pred,
-                      regress_type, 'unknown_')
-    score_var_scatter(y_unk, var_unk_pred,
-                     regress_type, 'unknown_')
+    score_scatter(y_unk_pred, y_unk, var_unk_pred,
+                  regress_type, 'unknown_')
 
 if __name__ == '__main__':
     train(**process())

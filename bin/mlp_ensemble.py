@@ -127,11 +127,11 @@ class MLPEnsembleRegressor(object):
                     model.add(Dense(layer_size, kernel_initializer='normal',
                                     activation=self.activations_[model_idx]))
                 model.add(
-                    Dense(2, kernel_initializer='normal',
+                    Dense(1, kernel_initializer='normal',
                           activation=self.activations_[model_idx])
                 )
 
-                model.compile(loss=gaussian_nll,
+                model.compile(loss='mean_squared_error',#gaussian_nll,
                               optimizer=self.solvers_[model_idx])
 
                 self.models_.append(model)
@@ -163,7 +163,7 @@ class MLPEnsembleRegressor(object):
         return self
 
     def predict(self, X):
-        if self.backend_ == 'sklearn':
+        if self.backend_ == 'keras':#'sklearn':
             ys = np.array([ model.predict(X) for model in self.models_ ])
             self.uncertainties_ = ys.var(0).flatten()
             return ys.mean(0).flatten()
