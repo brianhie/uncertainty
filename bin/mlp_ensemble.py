@@ -3,7 +3,9 @@ import numpy as np
 import tensorflow as tf
 import keras.backend as K
 
-tf.set_random_seed(0)
+from utils import tprint
+
+tf.set_random_seed(1)
 
 def check_param_length(param, n_regressors):
     if len(param) != n_regressors:
@@ -143,8 +145,8 @@ class MLPEnsembleRegressor(object):
                              .format(X.shape[0], len(y)))
 
         if self.verbose_:
-            print('Fitting MLP ensemble with {} regressors'
-                  .format(self.n_regressors_))
+            tprint('Fitting MLP ensemble with {} regressors'
+                   .format(self.n_regressors_))
 
         self._create_models(X, y)
 
@@ -154,29 +156,23 @@ class MLPEnsembleRegressor(object):
         elif self.backend_ == 'keras':
             [ model.fit(X, y,
                         batch_size=self.batch_sizes_[model_idx],
-                        epochs=int(ceil(self.batch_sizes_[model_idx] *
-                                        self.max_iters_[model_idx] /
-                                        X.shape[0])),
+                        epochs=self.max_iters_[model_idx],
                         verbose=self.verbose_)
               for model_idx, model in enumerate(self.models_) ]
+
+        if self.verbose_:
+            tprint('Done fitting MLP ensemble.')
 
         return self
 
     def predict(self, X):
-        if self.backend_ == 'keras':#'sklearn':
-            ys = np.array([ model.predict(X) for model in self.models_ ])
-            self.uncertainties_ = ys.var(0).flatten()
-            return ys.mean(0).flatten()
+        pred = np.array([ model.predict(X) for model in self.models_ ])
+        assert(pred.shape[0] == self.n_regressors_)
+        assert(pred.shape[1] == X.shape[0])
 
-        elif self.backend_ == 'keras':
-            pred = np.array([ model.predict(X) for model in self.models_ ])
-            assert(pred.shape[0] == self.n_regressors_)
-            assert(pred.shape[1] == X.shape[0])
-            assert(pred.shape[2] == 2)
-
+        if pred.shape[2] == 2:
             pred_mean = pred[:, :, 0]
             pred_sdev = pred[:, :, 1]
-            #pred_sdev = np.exp(pred[:, :, 1])
 
             ys = pred_mean.mean(0)
             self.uncertainties_ = (
@@ -184,3 +180,7 @@ class MLPEnsembleRegressor(object):
             ).mean(0) - np.power(ys, 2)
 
             return ys
+
+        else:
+            self.uncertainties_ = pred.var(0).flatten()
+            return pred.mean(0).flatten()

@@ -28,12 +28,12 @@ def mlp_ensemble_diverse1():
 
     return mlper
 
-def mlp_ensemble(n_neurons=500, n_regressors=5):
+def mlp_ensemble(n_neurons=500, n_regressors=5, n_epochs=100):
     from mlp_ensemble import MLPEnsembleRegressor
 
     layer_sizes_list = []
     for i in range(n_regressors):
-        layer_sizes_list.append((500, 500))
+        layer_sizes_list.append((n_neurons, n_neurons))
 
     mlper = MLPEnsembleRegressor(
         layer_sizes_list,
@@ -41,7 +41,7 @@ def mlp_ensemble(n_neurons=500, n_regressors=5):
         solvers='adam',
         alphas=0.1,
         batch_sizes=500,
-        max_iters=15000,
+        max_iters=n_epochs,
         momentums=0.9,
         nesterovs_momentums=True,
         backend='keras',
@@ -73,7 +73,12 @@ def mean_var_heatmap(idx, y_pred, var_pred, Kds, regress_type, prefix=''):
 
 def score_scatter(y_pred, y, var_pred, regress_type, prefix=''):
     plt.figure()
-    plt.scatter(y, y_pred, alpha=0.3)
+    if var_pred.max() - var_pred.min() == 0:
+        var_color = np.ones(len(var_pred))
+    else:
+        var_color = (var_pred - var_pred.min()) / (var_pred.max() - var_pred.min())
+    plt.scatter(y, y_pred, alpha=0.3, c=var_color)
+    plt.viridis()
     plt.xlabel('Real score')
     plt.ylabel('Predicted score')
     plt.savefig('figures/pred_vs_true_{}regressors{}.png'
@@ -100,14 +105,22 @@ def score_scatter(y_pred, y, var_pred, regress_type, prefix=''):
                 .format(prefix, regress_type), dpi=200)
     plt.close()
 
-def train(**kwargs):
+    np.savetxt('target/variance_{}regressors{}.txt'
+               .format(prefix, regress_type), var_pred)
+    np.savetxt('target/ypred_{}regressors{}.txt'
+               .format(prefix, regress_type), y_pred)
+    np.savetxt('target/ytrue_{}regressors{}.txt'
+               .format(prefix, regress_type), y)
+
+def train(regress_type='hybrid', **kwargs):
     X_obs = kwargs['X_obs']
     y_obs = kwargs['y_obs']
-    idx_obs = kwargs['idx_obs']
-    X_unk = kwargs['X_unk']
-    y_unk = kwargs['y_unk']
-    idx_unk = kwargs['idx_unk']
     Kds = kwargs['Kds']
+
+    kwargs['regress_type'] = regress_type
+
+    #X_obs = X_obs[:10]
+    #y_obs = y_obs[:10]
 
     # Balance the training set.
     #positive_idx = y_obs > 0
@@ -122,29 +135,55 @@ def train(**kwargs):
 
     # Fit the model.
 
-    n_chems, n_prots = Kds.shape
-
-    regress_type = 'hybrid'
-
     if regress_type == 'diverse1':
         regressor = mlp_ensemble_diverse1()
     elif regress_type == 'mlper1':
-        regressor = mlp_ensemble(n_neurons=200, n_regressors=1)
+        regressor = mlp_ensemble(
+            n_neurons=500,
+            n_regressors=1,
+            n_epochs=500,
+        )
     elif regress_type == 'mlper5':
         regressor = mlp_ensemble(n_neurons=200, n_regressors=5)
 
     elif regress_type == 'gp':
-        regressor = SparseGPRegressor(backend='sklearn', verbose=True)
+        regressor = SparseGPRegressor(
+            backend='sklearn',
+            n_restarts=10,
+            n_jobs=30,
+            verbose=True
+        )
     elif regress_type == 'sparsegp':
         regressor = SparseGPRegressor(backend='gpy', verbose=True)
 
     elif regress_type == 'hybrid':
         regressor = HybridMLPEnsembleGP(
-            mlp_ensemble(n_neurons=200, n_regressors=5),
-            SparseGPRegressor(backend='sklearn', verbose=True),
+            mlp_ensemble(
+                n_neurons=500,
+                n_regressors=1,
+                n_epochs=500,
+            ),
+            SparseGPRegressor(
+                backend='sklearn',
+                n_restarts=10,
+                n_jobs=30,
+                verbose=True,
+            ),
         )
 
     regressor.fit(X_obs, y_obs)
+
+    kwargs['regressor'] = regressor
+
+    return kwargs
+
+def analyze_regressor(**kwargs):
+    X_obs = kwargs['X_obs']
+    y_obs = kwargs['y_obs']
+    X_unk = kwargs['X_unk']
+    y_unk = kwargs['y_unk']
+    regressor = kwargs['regressor']
+    regress_type = kwargs['regress_type']
 
     # Analyze observed dataset.
 
@@ -169,4 +208,4 @@ def train(**kwargs):
                   regress_type, 'unknown_')
 
 if __name__ == '__main__':
-    train(**process())
+    analyze_regressor(**train(regress_type='hybrid', **process()))

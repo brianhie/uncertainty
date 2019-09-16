@@ -85,9 +85,9 @@ def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
     for pos, i in enumerate(chem_idxs):
         if pos % 4 == 0:
             [ idx_train.append((i, j)) for j in range(len(prots)) ]
-        elif pos % 4 == 1:
-            [ idx_train.append((i, j)) for j in prot_idx_train ]
-            [ idx_test.append((i, j)) for j in prot_idx_test ]
+        #elif pos % 4 == 1:
+        #    [ idx_train.append((i, j)) for j in prot_idx_train ]
+        #    [ idx_test.append((i, j)) for j in prot_idx_test ]
         else:
             [ idx_test.append((i, j)) for j in range(len(prots)) ]
 
@@ -108,6 +108,12 @@ def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
         X_test.append(chem2feature[chem] + prot2feature[prot])
         y_test.append(Kds[i, j])
     X_test, y_test = np.array(X_test), np.array(y_test)
+
+    # For runtime debugging:
+    #X_train = X_train[:10]
+    #y_train = y_train[:10]
+    #X_test = X_test[:10]
+    #y_test = y_test[:10]
 
     return X_train, y_train, idx_train, X_test, y_test, idx_test
 
