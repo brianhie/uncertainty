@@ -5,6 +5,7 @@ from process_davis2011kinase import load_kds
 
 def fingerprint(chem_smile):
     molecule = Chem.MolFromSmiles(chem_smile)
+
     # Morgan fingerprint with radius 2 equivalent to ECFP4.
     return list(AllChem.GetMorganFingerprintAsBitVect(molecule, 2, nBits=1024))
 

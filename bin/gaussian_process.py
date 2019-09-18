@@ -1,8 +1,11 @@
 import GPy
+import gpytorch
 from joblib import Parallel, delayed
 from math import ceil
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
+#from gpr import GaussianProcessRegressor
+import torch
 
 from utils import tprint
 
@@ -12,6 +15,19 @@ def parallel_predict(model, X, batch_num, batch_size):
         return_std=True
     )
     return mean, var
+
+class GPyTorchRegressor(gpytorch.models.ExactGP):
+    def __init__(self, X, y, likelihood):
+        super(GPyTorchRegressor, self).__init__(X, y, likelihood)
+        self.mean_module = gpytorch.means.ConstantMean()
+        self.covar_module = gpytorch.kernels.ScaleKernel(
+            gpytorch.kernels.RBFKernel()
+        )
+
+    def forward(self, X):
+        mean_X = self.mean_module(X)
+        covar_X = self.covar_module(X)
+        return gpytorch.distributions.MultivariateNormal(mean_X, covar_X)
 
 class SparseGPRegressor(object):
     def __init__(
@@ -65,6 +81,40 @@ class SparseGPRegressor(object):
             self.model_.Z.unconstrain()
             self.model_.optimize(messages=self.verbose_)
 
+        # GPyTorch with CUDA backend.
+        elif self.backend_ == 'gpytorch':
+            X = torch.Tensor(X).contiguous().cuda()
+            y = torch.Tensor(y).contiguous().cuda()
+
+            likelihood = gpytorch.likelihoods.GaussianLikelihood().cuda()
+            model = GPyTorchRegressor(X, y, likelihood).cuda()
+
+            model.train()
+            likelihood.train()
+
+            # Use the Adam optimizer.
+            #optimizer = torch.optim.LBFGS([ {'params': model.parameters()} ])
+            optimizer = torch.optim.Adam([
+                {'params': model.parameters()}, # Includes GaussianLikelihood parameters.
+            ], lr=1.)
+
+            # Loss for GPs is the marginal log likelihood.
+            mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
+
+            training_iterations = 100
+            for i in range(training_iterations):
+                optimizer.zero_grad()
+                output = model(X)
+                loss = -mll(output, y)
+                loss.backward()
+                if self.verbose_:
+                    tprint('Iter {}/{} - Loss: {:.3f}'
+                           .format(i + 1, training_iterations, loss.item()))
+                optimizer.step()
+
+            self.model_ = model
+            self.likelihood_ = likelihood
+
         if self.verbose_:
             tprint('Done fitting GP model.')
 
@@ -86,6 +136,21 @@ class SparseGPRegressor(object):
 
         elif self.backend_ == 'gpy':
             mean, var = self.model_.predict(X, full_cov=False)
+
+        elif self.backend_ == 'gpytorch':
+            X = torch.Tensor(X).contiguous().cuda()
+
+            # Set into eval mode.
+            self.model_.eval()
+            self.likelihood_.eval()
+
+            with torch.no_grad(), \
+                 gpytorch.settings.fast_pred_var(), \
+                 gpytorch.settings.max_root_decomposition_size(35):
+                preds = self.model_(X)
+
+            mean = preds.mean.detach().cpu().numpy()
+            var = preds.variance.detach().cpu().numpy()
 
         if self.verbose_:
             tprint('Done predicting with GP model.')

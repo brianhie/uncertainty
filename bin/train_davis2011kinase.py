@@ -1,10 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.stats as ss
 import seaborn as sns
 
 from gaussian_process import SparseGPRegressor
 from hybrid import HybridMLPEnsembleGP
 from process_davis2011kinase import process, visualize_heatmap
+from utils import tprint
 
 def mlp_ensemble_diverse1():
     from mlp_ensemble import MLPEnsembleRegressor
@@ -112,6 +114,14 @@ def score_scatter(y_pred, y, var_pred, regress_type, prefix=''):
     np.savetxt('target/ytrue_{}regressors{}.txt'
                .format(prefix, regress_type), y)
 
+def error_print(y_pred, y, namespace):
+    tprint('MSE for {}: {}'
+           .format(namespace, np.linalg.norm(y_pred - y)))
+    tprint('Pearson rho for {}: {}'
+           .format(namespace, ss.pearsonr(y_pred, y)))
+    tprint('Spearman r for {}: {}'
+           .format(namespace, ss.spearmanr(y_pred, y)))
+
 def train(regress_type='hybrid', **kwargs):
     X_obs = kwargs['X_obs']
     y_obs = kwargs['y_obs']
@@ -148,7 +158,7 @@ def train(regress_type='hybrid', **kwargs):
 
     elif regress_type == 'gp':
         regressor = SparseGPRegressor(
-            backend='sklearn',
+            backend='gpytorch',#'sklearn',
             n_restarts=10,
             n_jobs=30,
             verbose=True
@@ -159,9 +169,9 @@ def train(regress_type='hybrid', **kwargs):
     elif regress_type == 'hybrid':
         regressor = HybridMLPEnsembleGP(
             mlp_ensemble(
-                n_neurons=500,
+                n_neurons=600,
                 n_regressors=1,
-                n_epochs=500,
+                n_epochs=1000,
             ),
             SparseGPRegressor(
                 backend='sklearn',
@@ -182,6 +192,7 @@ def analyze_regressor(**kwargs):
     y_obs = kwargs['y_obs']
     X_unk = kwargs['X_unk']
     y_unk = kwargs['y_unk']
+    idx_unk = kwargs['idx_unk']
     regressor = kwargs['regressor']
     regress_type = kwargs['regress_type']
 
@@ -195,6 +206,7 @@ def analyze_regressor(**kwargs):
                     regress_type, 'observed_')
     score_scatter(y_obs_pred, y_obs, var_obs_pred,
                   regress_type, 'observed_')
+    error_print(y_obs_pred, y_obs, 'observed')
 
     # Analyze unknown dataset.
 
@@ -206,6 +218,22 @@ def analyze_regressor(**kwargs):
                     regress_type, 'unknown_')
     score_scatter(y_unk_pred, y_unk, var_unk_pred,
                   regress_type, 'unknown_')
+    error_print(y_unk_pred, y_unk, 'unknown_all')
+
+    # Stratify unknown dataset into quadrants.
+
+    idx_side = [ i for i, idx in enumerate(idx_unk)
+                 if idx in set(kwargs['idx_side']) ]
+    idx_repurpose = [ i for i, idx in enumerate(idx_unk)
+                      if idx in set(kwargs['idx_repurpose']) ]
+    idx_novel = [ i for i, idx in enumerate(idx_unk)
+                  if idx in set(kwargs['idx_novel']) ]
+    error_print(y_unk_pred[idx_side], y_unk[idx_side],
+                'unknown_side')
+    error_print(y_unk_pred[idx_repurpose], y_unk[idx_repurpose],
+                'unknown_repurpose')
+    error_print(y_unk_pred[idx_novel], y_unk[idx_novel],
+                'unknown_novel')
 
 if __name__ == '__main__':
     analyze_regressor(**train(regress_type='hybrid', **process()))

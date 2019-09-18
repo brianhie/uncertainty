@@ -34,7 +34,7 @@ def featurize_chems(fname, chems):
             if line.startswith('>'):
                 name = line[1:].rstrip()
                 chem2feature[name] = [
-                    int(field) for field in f.readline().rstrip().split()
+                    float(field) for field in f.readline().rstrip().split()
                 ]
     assert(len(set(chems) - set(chem2feature.keys())) == 0)
     return chem2feature
@@ -78,18 +78,30 @@ def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
             prot_idx_test += gene2idxs[gene]
 
     idx_train, idx_test = [], []
+    idx_side, idx_repurpose, idx_novel = [], [], []
 
     chem_idxs = list(range(len(chems)))
     random.shuffle(chem_idxs)
 
     for pos, i in enumerate(chem_idxs):
-        if pos % 4 == 0:
-            [ idx_train.append((i, j)) for j in range(len(prots)) ]
-        #elif pos % 4 == 1:
-        #    [ idx_train.append((i, j)) for j in prot_idx_train ]
-        #    [ idx_test.append((i, j)) for j in prot_idx_test ]
+        #if pos % 2 == 0:
+        #    [ idx_train.append((i, j)) for j in range(len(prots)) ]
+        if pos % 2 == 0:
+            [ idx_train.append((i, j)) for j in prot_idx_train ]
+            [ idx_test.append((i, j)) for j in prot_idx_test ]
+
+            # Test for side effects.
+            [ idx_side.append((i, j)) for j in prot_idx_test ]
+
         else:
             [ idx_test.append((i, j)) for j in range(len(prots)) ]
+
+            # Repurpose known chemicals.
+            [ idx_repurpose.append((i, j)) for j in prot_idx_train ]
+            # Identify novel interactions.
+            [ idx_novel.append((i, j)) for j in prot_idx_test ]
+
+    other_quadrants = [ idx_side, idx_repurpose, idx_novel ]
 
     assert(len(set(idx_train) & set(idx_test)) == 0)
 
@@ -112,10 +124,12 @@ def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
     # For runtime debugging:
     #X_train = X_train[:10]
     #y_train = y_train[:10]
+    #idx_train = idx_train[:10]
     #X_test = X_test[:10]
     #y_test = y_test[:10]
+    #idx_test = idx_train[:10]
 
-    return X_train, y_train, idx_train, X_test, y_test, idx_test
+    return X_train, y_train, idx_train, X_test, y_test, idx_test, other_quadrants
 
 def visualize_heatmap(chem_prot, suffix=''):
     plt.figure()
@@ -134,12 +148,12 @@ def process():
     visualize_heatmap(Kds, 'logKd')
 
     chem2feature = featurize_chems(
-        'data/davis2011kinase/chem_fingerprints.txt', chems
+        'data/davis2011kinase/chem_jtnnvae.txt', chems
     )
     prot2feature = featurize_prots(
         'data/davis2011kinase/prot_embeddings.txt', prots
     )
-    X_obs, y_obs, idx_obs, X_unk, y_unk, idx_unk = split_data(
+    X_obs, y_obs, idx_obs, X_unk, y_unk, idx_unk, other_quadrants = split_data(
         Kds, chems, genes, prots, chem2feature, prot2feature
     )
 
@@ -148,12 +162,18 @@ def process():
         'chems': chems,
         'genes': genes,
         'prots': prots,
+
         'X_obs': X_obs,
         'y_obs': y_obs,
         'idx_obs': idx_obs,
+
         'X_unk': X_unk,
         'y_unk': y_unk,
         'idx_unk': idx_unk,
+
+        'idx_side': other_quadrants[0],
+        'idx_repurpose': other_quadrants[1],
+        'idx_novel': other_quadrants[2],
     }
 
     return process_data
