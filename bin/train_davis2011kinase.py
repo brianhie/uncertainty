@@ -158,7 +158,7 @@ def train(regress_type='hybrid', **kwargs):
 
     elif regress_type == 'gp':
         regressor = SparseGPRegressor(
-            backend='gpytorch',#'sklearn',
+            backend='sklearn',
             n_restarts=10,
             n_jobs=30,
             verbose=True
@@ -169,12 +169,12 @@ def train(regress_type='hybrid', **kwargs):
     elif regress_type == 'hybrid':
         regressor = HybridMLPEnsembleGP(
             mlp_ensemble(
-                n_neurons=600,
+                n_neurons=200,
                 n_regressors=1,
-                n_epochs=1000,
+                n_epochs=500,
             ),
             SparseGPRegressor(
-                backend='sklearn',
+                backend='sklearn',#'gpytorch',
                 n_restarts=10,
                 n_jobs=30,
                 verbose=True,
