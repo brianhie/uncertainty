@@ -9,11 +9,11 @@ import torch
 
 from utils import tprint
 
-def parallel_predict(model, X, batch_num, batch_size):
-    mean, var = model.predict(
-        X[batch_num*batch_size:(batch_num+1)*batch_size],
-        return_std=True
-    )
+def parallel_predict(model, X, batch_num, n_batches, verbose):
+    mean, var = model.predict(X, return_std=True)
+    if verbose:
+        tprint('Finished predicting batch number {}/{}'
+               .format(batch_num + 1, n_batches))
     return mean, var
 
 class GPyTorchRegressor(gpytorch.models.ExactGP):
@@ -29,10 +29,9 @@ class GPyTorchRegressor(gpytorch.models.ExactGP):
         covar_X = self.covar_module(X)
         return gpytorch.distributions.MultivariateNormal(mean_X, covar_X)
 
-class SparseGPRegressor(object):
+class GPRegressor(object):
     def __init__(
             self,
-            n_inducing=1000,
             n_restarts=0,
             kernel='rbf',
             backend='sklearn',
@@ -40,7 +39,6 @@ class SparseGPRegressor(object):
             n_jobs=1,
             verbose=False,
     ):
-        self.n_inducing_ = n_inducing
         self.n_restarts_ = n_restarts
         self.kernel_ = kernel
         self.backend_ = backend
@@ -127,8 +125,12 @@ class SparseGPRegressor(object):
 
         if self.backend_ == 'sklearn':
             n_batches = int(ceil(float(X.shape[0]) / self.batch_size_))
-            results = Parallel(n_jobs=self.n_jobs_)(
-                delayed(parallel_predict)(self.model_, X, batch_num, self.batch_size_)
+            results = Parallel(n_jobs=self.n_jobs_, max_nbytes=None)(
+                delayed(parallel_predict)(
+                    self.model_,
+                    X[batch_num*self.batch_size_:(batch_num+1)*self.batch_size_],
+                    batch_num, n_batches, self.verbose_
+                )
                 for batch_num in range(n_batches)
             )
             mean = np.concatenate([ result[0] for result in results ])
@@ -157,3 +159,60 @@ class SparseGPRegressor(object):
 
         self.uncertainties_ = var.flatten()
         return mean.flatten()
+
+class SparseGPRegressor(object):
+    def __init__(
+            self,
+            n_inducing=1000,
+            method='geoskech',
+            n_restarts=0,
+            kernel='rbf',
+            backend='sklearn',
+            batch_size=1000,
+            n_jobs=1,
+            verbose=False,
+    ):
+        self.n_inducing_ = n_inducing
+        self.method_ = method
+        self.n_restarts_ = n_restarts
+        self.kernel_ = kernel
+        self.backend_ = backend
+        self.batch_size_ = batch_size
+        self.n_jobs_ = n_jobs
+        self.verbose_ = verbose
+
+    def fit(self, X, y):
+        if X.shape[0] > self.n_inducing_:
+            if self.method_ == 'uniform':
+                uni_idx = np.random.choice(X.shape[0], self.n_inducing_,
+                                           replace=False)
+                X_sketch = X[uni_idx]
+                y_sketch = y[uni_idx]
+
+            elif self.method_ == 'geosketch':
+                from fbpca import pca
+                from geosketch import gs
+
+                U, s, _ = pca(X, k=100)
+                X_dimred = U[:, :100] * s[:100]
+                gs_idx = gs(X_dimred, self.n_inducing_, replace=False)
+                X_sketch = X[gs_idx]
+                y_sketch = y[gs_idx]
+
+        else:
+            X_sketch, y_sketch = X, y
+
+        self.gpr_ = GPRegressor(
+            n_restarts=self.n_restarts_,
+            kernel=self.kernel_,
+            backend=self.backend_,
+            batch_size=self.batch_size_,
+            n_jobs=self.n_jobs_,
+            verbose=self.verbose_,
+        ).fit(X_sketch, y_sketch)
+
+
+    def predict(self, X):
+        y_pred = self.gpr_.predict(X)
+        self.uncertainties_ = self.gpr_.uncertainties_
+        return y_pred

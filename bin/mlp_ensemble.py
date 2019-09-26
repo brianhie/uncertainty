@@ -2,6 +2,7 @@ from math import ceil
 import numpy as np
 import tensorflow as tf
 import keras.backend as K
+from keras.activations import softplus
 
 from utils import tprint
 
@@ -11,16 +12,16 @@ def check_param_length(param, n_regressors):
     if len(param) != n_regressors:
         raise ValueError('Invalid parameter list length')
 
-def gaussian_nll(y_true, y_preds):
-    n_dims = int(int(y_preds.shape[1])/2)
-    mu = tf.minimum(y_preds[:, 0:n_dims], 10000.)
-    logsigma = y_preds[:, n_dims:]
+def gaussian_nll(ytrue, ypreds):
+    n_dims = int(int(ypreds.shape[1])/2)
+    mu = ypreds[:, 0:n_dims]
+    logsigma = ypreds[:, n_dims:]
 
-    mse = -0.5*K.sum(K.square((y_true-mu)/K.exp(logsigma)),axis=1)
+    mse = -0.5*K.sum(K.square((ytrue-mu)/K.exp(logsigma)),axis=1)
     sigma_trace = -K.sum(logsigma, axis=1)
-    #log2pi = -0.5*n_dims*np.log(2*np.pi)
+    log2pi = -0.5*n_dims*np.log(2*np.pi)
 
-    log_likelihood = mse+sigma_trace#+log2pi
+    log_likelihood = mse+sigma_trace+log2pi
 
     return K.mean(-log_likelihood)
 
@@ -28,6 +29,7 @@ class MLPEnsembleRegressor(object):
     def __init__(self,
                  layer_sizes_list,
                  activations='relu',
+                 loss='mse',
                  solvers='adam',
                  alphas=0.0001,
                  batch_sizes=None,
@@ -42,6 +44,8 @@ class MLPEnsembleRegressor(object):
 
         self.n_regressors_ = len(layer_sizes_list)
         self.layer_sizes_list_ = layer_sizes_list
+
+        self.loss_ = loss
 
         # Activation functions.
         if issubclass(type(activations), list):
@@ -118,8 +122,9 @@ class MLPEnsembleRegressor(object):
                 self.models_.append(model)
 
         elif self.backend_ == 'keras':
-            from keras.models import Sequential
+            from keras import regularizers
             from keras.layers import Dense
+            from keras.models import Sequential
 
             for model_idx in range(self.n_regressors_):
                 hidden_layer_sizes = self.layer_sizes_list_[model_idx]
@@ -127,14 +132,24 @@ class MLPEnsembleRegressor(object):
                 model = Sequential()
                 for layer_size in hidden_layer_sizes:
                     model.add(Dense(layer_size, kernel_initializer='normal',
-                                    activation=self.activations_[model_idx]))
-                model.add(
-                    Dense(1, kernel_initializer='normal',
-                          activation=self.activations_[model_idx])
-                )
+                                    activation=self.activations_[model_idx],
+                                    kernel_regularizer=regularizers.l2(0.01)))
 
-                model.compile(loss='mean_squared_error',#gaussian_nll,
-                              optimizer=self.solvers_[model_idx])
+                if self.loss_ == 'mse':
+                    model.add(
+                        Dense(1, kernel_initializer='normal',
+                              kernel_regularizer=regularizers.l2(0.01))
+                    )
+                    model.compile(loss='mean_squared_error',
+                                  optimizer=self.solvers_[model_idx])
+
+                elif self.loss_ == 'gaussian_nll':
+                    model.add(
+                        Dense(2, kernel_initializer='normal',
+                              kernel_regularizer=regularizers.l2(0.01))
+                    )
+                    model.compile(loss=gaussian_nll,
+                                  optimizer=self.solvers_[model_idx])
 
                 self.models_.append(model)
 
@@ -170,17 +185,23 @@ class MLPEnsembleRegressor(object):
         assert(pred.shape[0] == self.n_regressors_)
         assert(pred.shape[1] == X.shape[0])
 
-        if pred.shape[2] == 2:
+        if self.loss_ == 'gaussian_nll':
+            assert(pred.shape[2] == 2)
+
             pred_mean = pred[:, :, 0]
-            pred_sdev = pred[:, :, 1]
+            pred_var = np.exp(pred[:, :, 1])
 
             ys = pred_mean.mean(0)
             self.uncertainties_ = (
-                pred_sdev + np.power(pred_mean, 2)
+                pred_var + np.power(pred_mean, 2)
             ).mean(0) - np.power(ys, 2)
+            self.multi_predict_ = pred_mean.T
 
             return ys
 
-        else:
+        elif self.loss_ == 'mse':
+            assert(pred.shape[2] == 1)
+
             self.uncertainties_ = pred.var(0).flatten()
+            self.multi_predict_ = pred[:, :, 0].T
             return pred.mean(0).flatten()

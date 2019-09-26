@@ -129,7 +129,29 @@ def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
     #y_test = y_test[:10]
     #idx_test = idx_train[:10]
 
-    return X_train, y_train, idx_train, X_test, y_test, idx_test, other_quadrants
+    process_data = {
+        'Kds': Kds,
+        'chems': chems,
+        'genes': genes,
+        'prots': prots,
+
+        'chem2feature': chem2feature,
+        'prot2feature': prot2feature,
+
+        'X_obs': X_train,
+        'y_obs': y_train,
+        'idx_obs': idx_train,
+
+        'X_unk': X_test,
+        'y_unk': y_test,
+        'idx_unk': idx_test,
+
+        'idx_side': other_quadrants[0],
+        'idx_repurpose': other_quadrants[1],
+        'idx_novel': other_quadrants[2],
+    }
+
+    return process_data
 
 def visualize_heatmap(chem_prot, suffix=''):
     plt.figure()
@@ -148,33 +170,15 @@ def process():
     visualize_heatmap(Kds, 'logKd')
 
     chem2feature = featurize_chems(
-        'data/davis2011kinase/chem_jtnnvae.txt', chems
+        'data/davis2011kinase/chem_jtnnvae_molonly.txt', chems
     )
     prot2feature = featurize_prots(
         'data/davis2011kinase/prot_embeddings.txt', prots
     )
-    X_obs, y_obs, idx_obs, X_unk, y_unk, idx_unk, other_quadrants = split_data(
+
+    process_data = split_data(
         Kds, chems, genes, prots, chem2feature, prot2feature
     )
-
-    process_data = {
-        'Kds': Kds,
-        'chems': chems,
-        'genes': genes,
-        'prots': prots,
-
-        'X_obs': X_obs,
-        'y_obs': y_obs,
-        'idx_obs': idx_obs,
-
-        'X_unk': X_unk,
-        'y_unk': y_unk,
-        'idx_unk': idx_unk,
-
-        'idx_side': other_quadrants[0],
-        'idx_repurpose': other_quadrants[1],
-        'idx_novel': other_quadrants[2],
-    }
 
     return process_data
 

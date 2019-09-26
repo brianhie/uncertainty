@@ -1,4 +1,4 @@
-import multiprocessing
+import numpy as np
 
 class HybridMLPEnsembleGP(object):
     def __init__(self, mlp_ensemble, gaussian_process):
@@ -9,7 +9,14 @@ class HybridMLPEnsembleGP(object):
         self.mlp_ensemble_.fit(X, y)
 
         y_pred = self.mlp_ensemble_.predict(X)
+
         self.gaussian_process_.fit(X, y - y_pred)
+
+        #X_tiled = np.tile(X, (self.mlp_ensemble_.n_regressors_, 1))
+        #y_tiled = np.tile(y.flatten(), self.mlp_ensemble_.n_regressors_)
+        #y_pred_tiled = self.mlp_ensemble_.multi_predict_.flatten('F')
+
+        #self.gaussian_process_.fit(X_tiled, y_tiled - y_pred_tiled)
 
     def predict(self, X):
         residual = self.gaussian_process_.predict(X)

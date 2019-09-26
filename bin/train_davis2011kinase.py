@@ -3,7 +3,7 @@ import numpy as np
 import scipy.stats as ss
 import seaborn as sns
 
-from gaussian_process import SparseGPRegressor
+from gaussian_process import GPRegressor, SparseGPRegressor
 from hybrid import HybridMLPEnsembleGP
 from process_davis2011kinase import process, visualize_heatmap
 from utils import tprint
@@ -30,7 +30,8 @@ def mlp_ensemble_diverse1():
 
     return mlper
 
-def mlp_ensemble(n_neurons=500, n_regressors=5, n_epochs=100):
+def mlp_ensemble(n_neurons=500, n_regressors=5, n_epochs=100,
+                 loss='mse'):
     from mlp_ensemble import MLPEnsembleRegressor
 
     layer_sizes_list = []
@@ -40,6 +41,7 @@ def mlp_ensemble(n_neurons=500, n_regressors=5, n_epochs=100):
     mlper = MLPEnsembleRegressor(
         layer_sizes_list,
         activations='relu',
+        loss=loss,
         solvers='adam',
         alphas=0.1,
         batch_sizes=500,
@@ -147,37 +149,81 @@ def train(regress_type='hybrid', **kwargs):
 
     if regress_type == 'diverse1':
         regressor = mlp_ensemble_diverse1()
+
     elif regress_type == 'mlper1':
         regressor = mlp_ensemble(
-            n_neurons=500,
+            n_neurons=200,
             n_regressors=1,
-            n_epochs=500,
+            n_epochs=150,
+            loss='mse',
         )
+    elif regress_type == 'mlper1g':
+        regressor = mlp_ensemble(
+            n_neurons=100,
+            n_regressors=1,
+            n_epochs=100,
+            loss='gaussian_nll',
+        )
+
     elif regress_type == 'mlper5':
-        regressor = mlp_ensemble(n_neurons=200, n_regressors=5)
+        regressor = mlp_ensemble(
+            n_neurons=200,
+            n_regressors=5,
+            n_epochs=100,
+        )
+    elif regress_type == 'mlper5g':
+        regressor = mlp_ensemble(
+            n_neurons=200,
+            n_regressors=5,
+            n_epochs=100,
+            loss='gaussian_nll',
+        )
 
     elif regress_type == 'gp':
-        regressor = SparseGPRegressor(
+        regressor = GPRegressor(
             backend='sklearn',
             n_restarts=10,
             n_jobs=30,
             verbose=True
         )
     elif regress_type == 'sparsegp':
-        regressor = SparseGPRegressor(backend='gpy', verbose=True)
+        regressor = SparseGPRegressor(
+            method='geosketch',
+            n_inducing=8000,
+            backend='sklearn',
+            n_restarts=10,
+            n_jobs=30,
+            verbose=True
+        )
 
     elif regress_type == 'hybrid':
         regressor = HybridMLPEnsembleGP(
             mlp_ensemble(
                 n_neurons=200,
                 n_regressors=1,
-                n_epochs=500,
+                n_epochs=50,
             ),
-            SparseGPRegressor(
+            GPRegressor(
                 backend='sklearn',#'gpytorch',
                 n_restarts=10,
                 n_jobs=30,
                 verbose=True,
+            ),
+        )
+    elif regress_type == 'sparsehybrid':
+        regressor = HybridMLPEnsembleGP(
+            mlp_ensemble(
+                n_neurons=200,
+                n_regressors=1,
+                n_epochs=50,
+            ),
+            SparseGPRegressor(
+                method='geosketch',
+                n_inducing=8000,
+                backend='sklearn',
+                n_restarts=10,
+                n_jobs=30,
+                verbose=True
             ),
         )
 
