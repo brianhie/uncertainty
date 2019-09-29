@@ -1,10 +1,11 @@
 import numpy as np
+import os
 import sys
 
-from iterate_davis2011kinase import acquire
+from iterate_davis2011kinase import acquire, acquisition_rank, acquisition_scatter
 from process_davis2011kinase import process, visualize_heatmap
 from train_davis2011kinase import train
-from utils import tprint
+from utils import mkdir_p, tprint
 
 def load_chem_zinc(fname, chems):
     chem2zinc = {}
@@ -87,9 +88,6 @@ def setup(**kwargs):
         X_unk.append(chem2feature[chem] + prot2feature[prot])
     X_unk = np.array(X_unk)
 
-    #print(chems[668], prots[386])
-    #exit()
-
     kwargs['X_obs'] = X_obs
     kwargs['y_obs'] = y_obs
     kwargs['idx_obs'] = idx_obs
@@ -101,12 +99,50 @@ def setup(**kwargs):
 
     return kwargs
 
+def predict(**kwargs):
+    X_unk = kwargs['X_unk']
+    regress_type = kwargs['regress_type']
+
+    mkdir_p('target/prediction_cache')
+
+    if os.path.isfile('target/prediction_cache/{}_ypred.npy'
+                      .format(regress_type)):
+        y_unk_pred = np.load('target/prediction_cache/{}_ypred.npy'
+                             .format(regress_type))
+        var_unk_pred = np.load('target/prediction_cache/{}_varpred.npy'
+                               .format(regress_type))
+    else:
+        y_unk_pred = None
+
+    if y_unk_pred is None or y_unk_pred.shape[0] != X_unk.shape[0]:
+        kwargs = train(**kwargs)
+        regressor = kwargs['regressor']
+
+        y_unk_pred = regressor.predict(X_unk)
+        var_unk_pred = regressor.uncertainties_
+        np.save('target/prediction_cache/{}_ypred.npy'
+                .format(regress_type), y_unk_pred)
+        np.save('target/prediction_cache/{}_varpred.npy'
+                .format(regress_type), var_unk_pred)
+
+    y_pred_cutoff = 20000.
+    y_unk_pred[y_unk_pred > y_pred_cutoff] = y_pred_cutoff
+
+    acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
+    acquisition_scatter(y_unk_pred, var_unk_pred, acquisition,
+                        regress_type)
+
+    kwargs['y_unk_pred'] = y_unk_pred
+    kwargs['var_unk_pred'] = var_unk_pred
+
+    return kwargs
+
 def repurpose(**kwargs):
     idx_unk = kwargs['idx_unk']
     chems = kwargs['chems']
     prots = kwargs['prots']
 
-    kwargs = train(**kwargs)
+    kwargs = predict(**kwargs)
 
     acquired = acquire(**kwargs)[0]
 
@@ -119,7 +155,7 @@ if __name__ == '__main__':
 
     param_dict['regress_type'] = sys.argv[1]
     param_dict['scheme'] = sys.argv[2]
-    param_dict['n_candidates'] = 20
+    param_dict['n_candidates'] = int(sys.argv[3])
 
     param_dict = setup(**param_dict)
 

@@ -125,7 +125,7 @@ class GPRegressor(object):
 
         if self.backend_ == 'sklearn':
             n_batches = int(ceil(float(X.shape[0]) / self.batch_size_))
-            results = Parallel(n_jobs=self.n_jobs_, max_nbytes=None)(
+            results = Parallel(n_jobs=self.n_jobs_)(#, max_nbytes=None)(
                 delayed(parallel_predict)(
                     self.model_,
                     X[batch_num*self.batch_size_:(batch_num+1)*self.batch_size_],

@@ -13,12 +13,21 @@ def acquisition_rank(y_pred, var_pred, beta=1.):
     beta = 100. ** (beta - 1.)
     return rankdata(y_pred) + ((1. / beta) * rankdata(-var_pred))
 
-def acquisition_ucb(y_pred, var_pred, beta=1):
+def acquisition_ucb(y_pred, var_pred, beta=1.):
     return y_pred - (beta * var_pred)
 
-def debug_selection(regress_type='gp'):#, **kwargs):
-    y_obs_pred = np.loadtxt('target/ytrue_unknown_regressors{}.txt'
-                            .format(regress_type))
+def acquisition_scatter(y_unk_pred, var_unk_pred, acquisition, regress_type):
+    plt.figure()
+    plt.scatter(y_unk_pred, var_unk_pred, alpha=0.1, c=acquisition)
+    plt.viridis()
+    plt.title(regress_type.title())
+    plt.xlabel('Predicted score')
+    plt.ylabel('Variance')
+    plt.savefig('figures/acquisition_unknown_{}.png'
+                .format(regress_type), dpi=200)
+    plt.close()
+
+def debug_selection(regress_type='gp'):
     y_unk_pred = np.loadtxt('target/ypred_unknown_regressors{}.txt'
                             .format(regress_type))
     var_unk_pred = np.loadtxt('target/variance_unknown_regressors{}.txt'
@@ -29,15 +38,7 @@ def debug_selection(regress_type='gp'):#, **kwargs):
             acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
         else:
             acquisition = acquisition_ucb(y_unk_pred, var_unk_pred, beta=beta)
-        plt.figure()
-        plt.scatter(y_unk_pred, var_unk_pred, alpha=0.3, c=acquisition)
-        plt.viridis()
-        plt.title(regress_type.title())
-        plt.xlabel('Predicted score')
-        plt.ylabel('Variance')
-        plt.savefig('figures/acquisition_unknown_regressors{}_beta{}.png'
-                    .format(regress_type, beta), dpi=200)
-        plt.close()
+        acquisition_scatter(y_unk_pred, var_unk_pred, acquisition, regress_type)
 
     for beta in range(1, 11):
         acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta=beta)
@@ -46,14 +47,14 @@ def debug_selection(regress_type='gp'):#, **kwargs):
     exit()
 
 def select_candidates(explore=False, **kwargs):
-    regressor = kwargs['regressor']
+    y_unk_pred = kwargs['y_unk_pred']
+    var_unk_pred = kwargs['var_unk_pred']
     X_unk = kwargs['X_unk']
     y_unk = kwargs['y_unk']
     idx_unk = kwargs['idx_unk']
     n_candidates = kwargs['n_candidates']
-
-    y_unk_pred = regressor.predict(X_unk)
-    var_unk_pred = regressor.uncertainties_
+    chems = kwargs['chems']
+    prots = kwargs['prots']
 
     if explore:
         tprint('Exploring...')
@@ -68,21 +69,32 @@ def select_candidates(explore=False, **kwargs):
         max_acqs = np.argsort(-acquisition)[:n_candidates]
 
     for max_acq in max_acqs:
+        i, j = idx_unk[max_acq]
+        chem = chems[i]
+        prot = prots[j]
+
         if y_unk is None:
-            tprint('\tAcquire element {} with predicted Kd value {}'
-                   .format(idx_unk[max_acq], y_unk_pred[max_acq]))
+            tprint('\tAcquire {} <--> {} with predicted Kd value {:.3f}'
+                   ' and variance {:.3f}'
+                   .format(chem, prot, y_unk_pred[max_acq],
+                           var_unk_pred[max_acq]))
         else:
-            tprint('\tAcquire element {} with real Kd value {}'
-                   .format(idx_unk[max_acq], y_unk[max_acq]))
+            tprint('\tAcquire {} <--> {} with real Kd value {}'
+                   .format(chem, prot, y_unk[max_acq]))
 
     return list(max_acqs)
 
 def select_candidates_per_quadrant(explore=False, **kwargs):
-    regressor = kwargs['regressor']
+    y_unk_pred = kwargs['y_unk_pred']
+    var_unk_pred = kwargs['var_unk_pred']
     X_unk = kwargs['X_unk']
     y_unk = kwargs['y_unk']
     idx_unk = kwargs['idx_unk']
     n_candidates = kwargs['n_candidates']
+    chems = kwargs['chems']
+    prots = kwargs['prots']
+
+    acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
 
     acquired = []
 
@@ -99,39 +111,45 @@ def select_candidates_per_quadrant(explore=False, **kwargs):
         quad = [ i for i, idx in enumerate(idx_unk)
                  if idx in set(kwargs['idx_' + quad_name]) ]
 
+        y_unk_quad = y_unk_pred[quad]
+        var_unk_quad = var_unk_pred[quad]
         idx_unk_quad = [ idx for i, idx in enumerate(idx_unk)
                          if idx in set(kwargs['idx_' + quad_name]) ]
 
-        y_unk_pred = regressor.predict(X_unk[quad])
-        var_unk_pred = regressor.uncertainties_
-
         if explore:
             max_acqs = sorted(set([
-                np.argmax(acquisition_rank(y_unk_pred, var_unk_pred, cand))
+                np.argmax(acquisition_rank(y_unk_quad, var_unk_quad, cand))
                 for cand in range(1, n_candidates + 1)
             ]))
         else:
-            acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
-            max_acqs = np.argsort(-acquisition)[:n_candidates]
+            max_acqs = np.argsort(-acquisition[quad])[:n_candidates]
 
         for max_acq in max_acqs:
+            i, j = idx_unk_quad[max_acq]
+            chem = chems[i]
+            prot = prots[j]
+
             if y_unk is None:
-                tprint('\tAcquire element {} with predicted Kd value {}'
-                       .format(idx_unk_quad[max_acq], y_unk_pred[max_acq]))
+                tprint('\tAcquire {} <--> {} with predicted Kd value {}'
+                       .format(chem, prot, y_unk_quad[max_acq]))
             else:
-                tprint('\tAcquire element {} with real Kd value {}'
-                       .format(idx_unk_quad[max_acq], y_unk[quad][max_acq]))
+                tprint('\tAcquire {} <--> {} with real Kd value {}'
+                       .format(chem, prot, y_unk[quad][max_acq]))
 
         acquired += list(orig_idx[quad][max_acqs])
 
     return acquired
 
 def select_candidates_per_protein(**kwargs):
-    regressor = kwargs['regressor']
+    y_unk_pred = kwargs['y_unk_pred']
+    var_unk_pred = kwargs['var_unk_pred']
     X_unk = kwargs['X_unk']
     y_unk = kwargs['y_unk']
     idx_unk = kwargs['idx_unk']
+    chems = kwargs['chems']
     prots = kwargs['prots']
+
+    acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
 
     acquired = []
 
@@ -139,31 +157,31 @@ def select_candidates_per_protein(**kwargs):
 
     for prot_idx, prot in enumerate(prots):
         involves_prot = [ j == prot_idx for i, j in idx_unk ]
-        X_unk_prot = X_unk[involves_prot]
-        y_unk_prot = y_unk[involves_prot]
         idx_unk_prot = [ (i, j) for i, j in idx_unk if j == prot_idx ]
 
-        y_unk_pred = regressor.predict(X_unk_prot)
-        var_unk_pred = regressor.uncertainties_
+        max_acq = np.argmax(acquisition[involves_prot])
 
-        acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
-
-        max_acq = np.argmax(acquisition)
+        i, j = idx_unk_prot[max_acq]
+        chem = chems[i]
+        prot = prots[j]
 
         tprint('Protein {}'.format(prot))
         if y_unk is None:
-            tprint('\tAcquire element {} with predicted Kd value {}'
-                   .format(idx_unk_prot[max_acq], y_unk_pred[max_acq]))
+            tprint('\tAcquire {} <--> {} with predicted Kd value {:.3f}'
+                   ' and variance {:.3f}'
+                   .format(chem, prot, y_unk_pred[involves_prot][max_acq],
+                           var_unk_pred[involves_prot][max_acq]))
         else:
-            tprint('\tAcquire element {} with real Kd value {}'
-                   .format(idx_unk_prot[max_acq], y_unk_prot[max_acq]))
+            tprint('\tAcquire {} <--> {} with real Kd value {}'
+                   .format(chem, prot, y_unk[involves_prot][max_acq]))
 
         acquired.append(orig_idx[involves_prot][max_acq])
 
     return acquired
 
 def select_candidates_per_partition(**kwargs):
-    regressor = kwargs['regressor']
+    y_unk_pred = kwargs['y_unk_pred']
+    var_unk_pred = kwargs['var_unk_pred']
     X_unk = kwargs['X_unk']
     y_unk = kwargs['y_unk']
     idx_unk = kwargs['idx_unk']
@@ -171,6 +189,8 @@ def select_candidates_per_partition(**kwargs):
     chems = kwargs['chems']
     prots = kwargs['prots']
     chem2feature = kwargs['chem2feature']
+
+    acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
 
     if 'partition' in kwargs:
         partition = kwargs['partition']
@@ -197,28 +217,29 @@ def select_candidates_per_partition(**kwargs):
     orig2new_idx = { i: i for i in range(X_unk.shape[0]) }
 
     for pi in range(len(partition)):
-        y_unk_pred = regressor.predict(X_unk[partition[pi]])
-        var_unk_pred = regressor.uncertainties_
+        if len(partition[pi]) == 0:
+            tprint('Partition {} is empty'.format(pi))
+            continue
+
         partition_pi = set(list(partition[pi]))
         idx_unk_part = [ idx for i, idx in enumerate(idx_unk)
                          if i in partition_pi ]
 
-        acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
-        max_acq = np.argmax(acquisition)
+        max_acq = np.argmax(acquisition[partition[pi]])
+
+        i, j = idx_unk_part[max_acq]
+        chem = chems[i]
+        prot = prots[j]
 
         tprint('Partition {}'.format(pi))
         if y_unk is None:
-            i, j = idx_unk_part[max_acq]
-            chem = chems[i]
-            prot = prots[j]
             tprint('\tAcquire {} <--> {} with predicted Kd value {:.3f}'
                    ' and variance {:.3f}'
-                   .format(chem, prot, y_unk_pred[max_acq],
-                           var_unk_pred[max_acq]))
+                   .format(chem, prot, y_unk_pred[partition[pi]][max_acq],
+                           var_unk_pred[partition[pi]][max_acq]))
         else:
-            tprint('\tAcquire element {} with real Kd value {}'
-                   .format(idx_unk_part[max_acq],
-                           y_unk[partition[pi]][max_acq]))
+            tprint('\tAcquire {} <--> {} with real Kd value {}'
+                   .format(chem, prot, y_unk[partition[pi]][max_acq]))
 
         orig_max_acq = partition[pi][max_acq]
         for i in orig2new_idx:
@@ -232,7 +253,6 @@ def select_candidates_per_partition(**kwargs):
     # Acquire one point per partition.
 
     acquired = sorted([ i for i in orig2new_idx if orig2new_idx[i] is None ])
-    assert(len(acquired) == n_partitions)
 
     # Make sure new partition indices match new unknown dataset.
 
@@ -286,6 +306,9 @@ def iterate(**kwargs):
     idx_unk = kwargs['idx_unk']
     regressor = kwargs['regressor']
     regress_type = kwargs['regress_type']
+
+    kwargs['y_unk_pred'] = regressor.predict(X_unk)
+    kwargs['var_unk_pred'] = regressor.uncertainties_
 
     acquired, kwargs = acquire(**kwargs)
 
