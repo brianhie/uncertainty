@@ -148,6 +148,7 @@ def select_candidates_per_protein(**kwargs):
     idx_unk = kwargs['idx_unk']
     chems = kwargs['chems']
     prots = kwargs['prots']
+    n_candidates = kwargs['n_candidates']
 
     acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
 
@@ -159,23 +160,25 @@ def select_candidates_per_protein(**kwargs):
         involves_prot = [ j == prot_idx for i, j in idx_unk ]
         idx_unk_prot = [ (i, j) for i, j in idx_unk if j == prot_idx ]
 
-        max_acq = np.argmax(acquisition[involves_prot])
-
-        i, j = idx_unk_prot[max_acq]
-        chem = chems[i]
-        prot = prots[j]
+        max_acqs = np.argsort(-acquisition[involves_prot])[:n_candidates]
 
         tprint('Protein {}'.format(prot))
-        if y_unk is None:
-            tprint('\tAcquire {} <--> {} with predicted Kd value {:.3f}'
-                   ' and variance {:.3f}'
-                   .format(chem, prot, y_unk_pred[involves_prot][max_acq],
-                           var_unk_pred[involves_prot][max_acq]))
-        else:
-            tprint('\tAcquire {} <--> {} with real Kd value {}'
-                   .format(chem, prot, y_unk[involves_prot][max_acq]))
 
-        acquired.append(orig_idx[involves_prot][max_acq])
+        for max_acq in max_acqs:
+            i, j = idx_unk_prot[max_acq]
+            chem = chems[i]
+            prot = prots[j]
+
+            if y_unk is None:
+                tprint('\tAcquire {} <--> {} with predicted Kd value {:.3f}'
+                       ' and variance {:.3f}'
+                       .format(chem, prot, y_unk_pred[involves_prot][max_acq],
+                               var_unk_pred[involves_prot][max_acq]))
+            else:
+                tprint('\tAcquire {} <--> {} with real Kd value {}'
+                       .format(chem, prot, y_unk[involves_prot][max_acq]))
+
+            acquired.append(orig_idx[involves_prot][max_acq])
 
     return acquired
 

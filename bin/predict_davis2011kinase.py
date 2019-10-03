@@ -47,7 +47,7 @@ def setup(**kwargs):
     )
 
     zincs, zinc2feature = load_zinc_features(
-        'data/davis2011kinase/zinc_fda_jtnnvae_molonly.txt',
+        'data/davis2011kinase/cayman_jtnnvae_molonly.txt',
         set({ chem2zinc[chem] for chem in chem2zinc })
     )
 
@@ -69,6 +69,7 @@ def setup(**kwargs):
     idx_unk = [
         (i + orig_len_chems, j) for i in range(len(zincs))
         for j in range(len(prots))
+        if prots[j] == 'PKNB(M.tuberculosis)'
     ]
 
     tprint('Constructing training dataset...')
