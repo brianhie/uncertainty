@@ -1,12 +1,12 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as ss
 import seaborn as sns
 
+from utils import tprint, plt
+from bayesian_neural_network import BayesianNN
 from gaussian_process import GPRegressor, SparseGPRegressor
 from hybrid import HybridMLPEnsembleGP
 from process_davis2011kinase import process, visualize_heatmap
-from utils import tprint
 
 def mlp_ensemble_diverse1():
     from mlp_ensemble import MLPEnsembleRegressor
@@ -179,6 +179,15 @@ def train(regress_type='hybrid', **kwargs):
             loss='gaussian_nll',
         )
 
+    elif regress_type == 'bayesnn':
+        regressor = BayesianNN(
+            n_hidden1=200,
+            n_hidden2=200,
+            n_iter=5000,
+            n_posterior_samples=200,
+            verbose=True,
+        )
+
     elif regress_type == 'gp':
         regressor = GPRegressor(
             backend='sklearn',
@@ -282,4 +291,4 @@ def analyze_regressor(**kwargs):
                 'unknown_novel')
 
 if __name__ == '__main__':
-    analyze_regressor(**train(regress_type='hybrid', **process()))
+    analyze_regressor(**train(regress_type='bayesnn', **process()))

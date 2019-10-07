@@ -1,13 +1,12 @@
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import rankdata
 import sys
 
+from utils import tprint, plt
 from gaussian_process import SparseGPRegressor
 from hybrid import HybridMLPEnsembleGP
 from process_davis2011kinase import process, visualize_heatmap
 from train_davis2011kinase import train
-from utils import tprint
 
 def acquisition_rank(y_pred, var_pred, beta=1.):
     beta = 100. ** (beta - 1.)
@@ -74,13 +73,13 @@ def select_candidates(explore=False, **kwargs):
         prot = prots[j]
 
         if y_unk is None:
-            tprint('\tAcquire {} <--> {} with predicted Kd value {:.3f}'
+            tprint('\tAcquire {} {} <--> {} with predicted Kd value {:.3f}'
                    ' and variance {:.3f}'
-                   .format(chem, prot, y_unk_pred[max_acq],
+                   .format((i, j), chem, prot, y_unk_pred[max_acq],
                            var_unk_pred[max_acq]))
         else:
-            tprint('\tAcquire {} <--> {} with real Kd value {}'
-                   .format(chem, prot, y_unk[max_acq]))
+            tprint('\tAcquire {} {} <--> {} with real Kd value {}'
+                   .format((i, j), chem, prot, y_unk[max_acq]))
 
     return list(max_acqs)
 
@@ -130,11 +129,11 @@ def select_candidates_per_quadrant(explore=False, **kwargs):
             prot = prots[j]
 
             if y_unk is None:
-                tprint('\tAcquire {} <--> {} with predicted Kd value {}'
-                       .format(chem, prot, y_unk_quad[max_acq]))
+                tprint('\tAcquire {} {} <--> {} with predicted Kd value {}'
+                       .format((i, j), chem, prot, y_unk_quad[max_acq]))
             else:
-                tprint('\tAcquire {} <--> {} with real Kd value {}'
-                       .format(chem, prot, y_unk[quad][max_acq]))
+                tprint('\tAcquire {} {} <--> {} with real Kd value {}'
+                       .format((i, j), chem, prot, y_unk[quad][max_acq]))
 
         acquired += list(orig_idx[quad][max_acqs])
 
@@ -170,13 +169,13 @@ def select_candidates_per_protein(**kwargs):
             prot = prots[j]
 
             if y_unk is None:
-                tprint('\tAcquire {} <--> {} with predicted Kd value {:.3f}'
+                tprint('\tAcquire {} {} <--> {} with predicted Kd value {:.3f}'
                        ' and variance {:.3f}'
-                       .format(chem, prot, y_unk_pred[involves_prot][max_acq],
+                       .format((i, j), chem, prot, y_unk_pred[involves_prot][max_acq],
                                var_unk_pred[involves_prot][max_acq]))
             else:
-                tprint('\tAcquire {} <--> {} with real Kd value {}'
-                       .format(chem, prot, y_unk[involves_prot][max_acq]))
+                tprint('\tAcquire {} {} <--> {} with real Kd value {}'
+                       .format((i, j), chem, prot, y_unk[involves_prot][max_acq]))
 
             acquired.append(orig_idx[involves_prot][max_acq])
 
@@ -236,13 +235,13 @@ def select_candidates_per_partition(**kwargs):
 
         tprint('Partition {}'.format(pi))
         if y_unk is None:
-            tprint('\tAcquire {} <--> {} with predicted Kd value {:.3f}'
+            tprint('\tAcquire {} {} <--> {} with predicted Kd value {:.3f}'
                    ' and variance {:.3f}'
-                   .format(chem, prot, y_unk_pred[partition[pi]][max_acq],
+                   .format((i, j), chem, prot, y_unk_pred[partition[pi]][max_acq],
                            var_unk_pred[partition[pi]][max_acq]))
         else:
-            tprint('\tAcquire {} <--> {} with real Kd value {}'
-                   .format(chem, prot, y_unk[partition[pi]][max_acq]))
+            tprint('\tAcquire {} {} <--> {} with real Kd value {}'
+                   .format((i, j), chem, prot, y_unk[partition[pi]][max_acq]))
 
         orig_max_acq = partition[pi][max_acq]
         for i in orig2new_idx:
@@ -348,12 +347,9 @@ if __name__ == '__main__':
 
     param_dict['regress_type'] = sys.argv[1]
     param_dict['scheme'] = sys.argv[2]
-    param_dict['n_candidates'] = 10
+    param_dict['n_candidates'] = int(sys.argv[3])
 
-    if param_dict['scheme'] == 'partition':
-        n_iter = 5
-    else:
-        n_iter = 30
+    n_iter = 5
 
     for i in range(n_iter):
         tprint('Iteration {}'.format(i))

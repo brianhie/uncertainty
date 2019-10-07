@@ -1,9 +1,8 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import random
 import seaborn as sns
 
-from utils import mkdir_p
+from utils import mkdir_p, plt
 
 np.random.seed(0)
 random.seed(0)

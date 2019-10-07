@@ -1,9 +1,9 @@
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import multivariate_normal
 from sklearn.mixture import GaussianMixture
 import sys
 
+from utils import plt
 from process_davis2011kinase import process
 
 def parse_log(regress_type, experiment, **kwargs):
@@ -37,14 +37,14 @@ def parse_log(regress_type, experiment, **kwargs):
 
                 continue
 
-            elif line.startswith('\tAcquire element'):
+            elif line.startswith('\tAcquire '):
                 fields = line.strip().split()
 
                 Kd = float(fields[-1])
                 iter_to_Kds[iteration].append(Kd)
 
-                chem_idx = int(fields[2].lstrip('(').rstrip(','))
-                prot_idx = int(fields[3].strip().rstrip(')'))
+                chem_idx = int(fields[1].lstrip('(').rstrip(','))
+                prot_idx = int(fields[2].strip().rstrip(')'))
                 iter_to_idxs[iteration].append((chem_idx, prot_idx))
 
                 continue
@@ -78,9 +78,6 @@ def parse_log(regress_type, experiment, **kwargs):
     plt.savefig('figures/Kd_over_iterations_{}_{}.png'
                 .format(regress_type, experiment))
     plt.close()
-
-    if experiment == 'perprot':
-        return
 
     # Plot differential entropy of acquired samples over iterations.
 
