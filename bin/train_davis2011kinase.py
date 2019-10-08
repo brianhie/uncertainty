@@ -154,7 +154,7 @@ def train(regress_type='hybrid', **kwargs):
         regressor = mlp_ensemble(
             n_neurons=200,
             n_regressors=1,
-            n_epochs=150,
+            n_epochs=50,
             loss='mse',
         )
     elif regress_type == 'mlper1g':
@@ -291,4 +291,4 @@ def analyze_regressor(**kwargs):
                 'unknown_novel')
 
 if __name__ == '__main__':
-    analyze_regressor(**train(regress_type='bayesnn', **process()))
+    analyze_regressor(**train(regress_type='mlper1', **process()))
