@@ -9,8 +9,7 @@ from process_davis2011kinase import process, visualize_heatmap
 from train_davis2011kinase import train
 
 def acquisition_rank(y_pred, var_pred, beta=1.):
-    beta = 100. ** (beta - 1.)
-    return rankdata(y_pred) + ((1. / beta) * rankdata(-var_pred))
+    return rankdata(y_pred) + (beta * rankdata(-var_pred))
 
 def acquisition_ucb(y_pred, var_pred, beta=1.):
     return y_pred - (beta * var_pred)
@@ -45,7 +44,7 @@ def debug_selection(regress_type='gp'):
 
     exit()
 
-def select_candidates(explore=False, **kwargs):
+def select_candidates(point=False, **kwargs):
     y_unk_pred = kwargs['y_unk_pred']
     var_unk_pred = kwargs['var_unk_pred']
     X_unk = kwargs['X_unk']
@@ -55,17 +54,14 @@ def select_candidates(explore=False, **kwargs):
     chems = kwargs['chems']
     prots = kwargs['prots']
 
-    if explore:
-        tprint('Exploring...')
-        max_acqs = sorted(set([
-            np.argmax(acquisition_rank(y_unk_pred, var_unk_pred, cand))
-            for cand in range(1, n_candidates + 1)
-        ]))
-
+    if point:
+        tprint('Exploiting (using point prediction only)...')
+        acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta=0.)
     else:
         tprint('Exploiting...')
-        acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
-        max_acqs = np.argsort(-acquisition)[:n_candidates]
+        acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta=10.)
+
+    max_acqs = np.argsort(-acquisition)[:n_candidates]
 
     for max_acq in max_acqs:
         i, j = idx_unk[max_acq]
@@ -205,6 +201,7 @@ def select_candidates_per_partition(**kwargs):
             n_clusters=n_partitions,
             init='k-means++',
             n_init=3,
+            random_state=10,
         ).fit_predict(np.array([
             chem2feature[chem] for chem in chems
         ]))
@@ -280,6 +277,9 @@ def acquire(**kwargs):
 
     if scheme == 'exploit':
         acquired = select_candidates(**kwargs)
+
+    elif scheme == 'pointexploit':
+        acquired = select_candidates(point=True, **kwargs)
 
     elif scheme == 'explore':
         acquired = select_candidates(explore=True, **kwargs)

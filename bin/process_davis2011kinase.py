@@ -136,6 +136,8 @@ def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
 
         'chem2feature': chem2feature,
         'prot2feature': prot2feature,
+        'n_features_chem': len(chem2feature[chems[0]]),
+        'n_features_prot': len(prot2feature[prots[0]]),
 
         'X_obs': X_train,
         'y_obs': y_train,

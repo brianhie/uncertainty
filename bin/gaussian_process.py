@@ -56,7 +56,7 @@ class GPRegressor(object):
         # scikit-learn backend.
         if self.backend_ == 'sklearn':
             self.model_ = GaussianProcessRegressor(
-                kernel=None,
+                kernel=self.kernel_,
                 normalize_y=True,
                 n_restarts_optimizer=self.n_restarts_,
                 copy_X_train=False,

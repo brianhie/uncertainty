@@ -79,6 +79,8 @@ def parse_log(regress_type, experiment, **kwargs):
                 .format(regress_type, experiment))
     plt.close()
 
+    return
+
     # Plot differential entropy of acquired samples over iterations.
 
     chems = kwargs['chems']

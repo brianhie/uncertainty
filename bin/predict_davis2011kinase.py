@@ -126,7 +126,7 @@ def predict(**kwargs):
         np.save('target/prediction_cache/{}_varpred.npy'
                 .format(regress_type), var_unk_pred)
 
-    y_pred_cutoff = 20000.
+    y_pred_cutoff = 2000000.
     y_unk_pred[y_unk_pred > y_pred_cutoff] = y_pred_cutoff
 
     acquisition = acquisition_rank(y_unk_pred, var_unk_pred)

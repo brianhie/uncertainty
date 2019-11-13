@@ -3,9 +3,6 @@ import scipy.stats as ss
 import seaborn as sns
 
 from utils import tprint, plt
-from bayesian_neural_network import BayesianNN
-from gaussian_process import GPRegressor, SparseGPRegressor
-from hybrid import HybridMLPEnsembleGP
 from process_davis2011kinase import process, visualize_heatmap
 
 def mlp_ensemble_diverse1():
@@ -31,12 +28,12 @@ def mlp_ensemble_diverse1():
     return mlper
 
 def mlp_ensemble(n_neurons=500, n_regressors=5, n_epochs=100,
-                 loss='mse'):
+                 n_hidden_layers=2, loss='mse'):
     from mlp_ensemble import MLPEnsembleRegressor
 
     layer_sizes_list = []
     for i in range(n_regressors):
-        layer_sizes_list.append((n_neurons, n_neurons))
+        layer_sizes_list.append((n_neurons,) * n_hidden_layers)
 
     mlper = MLPEnsembleRegressor(
         layer_sizes_list,
@@ -131,6 +128,9 @@ def train(regress_type='hybrid', **kwargs):
 
     kwargs['regress_type'] = regress_type
 
+    n_features_chem = kwargs['n_features_chem']
+    n_features_prot = kwargs['n_features_prot']
+
     #X_obs = X_obs[:10]
     #y_obs = y_obs[:10]
 
@@ -147,15 +147,22 @@ def train(regress_type='hybrid', **kwargs):
 
     # Fit the model.
 
-    if regress_type == 'diverse1':
-        regressor = mlp_ensemble_diverse1()
+    if regress_type == 'baseline':
+        from baseline import Baseline
+        regressor = Baseline()
 
     elif regress_type == 'mlper1':
         regressor = mlp_ensemble(
             n_neurons=200,
             n_regressors=1,
             n_epochs=50,
-            loss='mse',
+        )
+    elif regress_type == 'dmlper1':
+        regressor = mlp_ensemble(
+            n_neurons=1000,
+            n_regressors=1,
+            n_hidden_layers=15,
+            n_epochs=300,
         )
     elif regress_type == 'mlper1g':
         regressor = mlp_ensemble(
@@ -175,11 +182,12 @@ def train(regress_type='hybrid', **kwargs):
         regressor = mlp_ensemble(
             n_neurons=200,
             n_regressors=5,
-            n_epochs=100,
+            n_epochs=50,
             loss='gaussian_nll',
         )
 
     elif regress_type == 'bayesnn':
+        from bayesian_neural_network import BayesianNN
         regressor = BayesianNN(
             n_hidden1=200,
             n_hidden2=200,
@@ -189,13 +197,29 @@ def train(regress_type='hybrid', **kwargs):
         )
 
     elif regress_type == 'gp':
+        from gaussian_process import GPRegressor
+        from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
         regressor = GPRegressor(
+            kernel=C(1., 'fixed') * RBF(1., 'fixed'),
             backend='sklearn',
-            n_restarts=10,
+            n_jobs=30,
+            verbose=True
+        )
+    elif regress_type == 'gpfactorized':
+        from gaussian_process import GPRegressor
+        from sklearn.gaussian_process.kernels import ConstantKernel as C
+        from kernels import FactorizedRBF
+        regressor = GPRegressor(
+            kernel=C(1., 'fixed') * FactorizedRBF(
+                [ 1.1, 1. ], [ n_features_chem, n_features_prot ], 'fixed'
+            ),
+            backend='sklearn',
+            n_restarts=0,
             n_jobs=30,
             verbose=True
         )
     elif regress_type == 'sparsegp':
+        from gaussian_process import SparseGPRegressor
         regressor = SparseGPRegressor(
             method='geosketch',
             n_inducing=8000,
@@ -206,6 +230,8 @@ def train(regress_type='hybrid', **kwargs):
         )
 
     elif regress_type == 'hybrid':
+        from gaussian_process import GPRegressor
+        from hybrid import HybridMLPEnsembleGP
         regressor = HybridMLPEnsembleGP(
             mlp_ensemble(
                 n_neurons=200,
@@ -219,7 +245,26 @@ def train(regress_type='hybrid', **kwargs):
                 verbose=True,
             ),
         )
+    elif regress_type == 'dhybrid':
+        from gaussian_process import GPRegressor
+        from hybrid import HybridMLPEnsembleGP
+        regressor = HybridMLPEnsembleGP(
+            mlp_ensemble(
+                n_neurons=1000,
+                n_regressors=1,
+                n_hidden_layers=15,
+                n_epochs=300,
+            ),
+            GPRegressor(
+                backend='sklearn',#'gpytorch',
+                n_restarts=10,
+                n_jobs=30,
+                verbose=True,
+            ),
+        )
     elif regress_type == 'sparsehybrid':
+        from gaussian_process import SparseGPRegressor
+        from hybrid import HybridMLPEnsembleGP
         regressor = HybridMLPEnsembleGP(
             mlp_ensemble(
                 n_neurons=200,
@@ -237,6 +282,8 @@ def train(regress_type='hybrid', **kwargs):
         )
 
     regressor.fit(X_obs, y_obs)
+
+    print(regressor.model_.kernel_.get_params())
 
     kwargs['regressor'] = regressor
 
@@ -291,4 +338,4 @@ def analyze_regressor(**kwargs):
                 'unknown_novel')
 
 if __name__ == '__main__':
-    analyze_regressor(**train(regress_type='mlper1', **process()))
+    analyze_regressor(**train(regress_type='gpfactorized', **process()))
