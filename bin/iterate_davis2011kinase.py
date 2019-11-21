@@ -59,7 +59,7 @@ def select_candidates(point=False, **kwargs):
         acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta=0.)
     else:
         tprint('Exploiting...')
-        acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta=10.)
+        acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta=20.)
 
     max_acqs = np.argsort(-acquisition)[:n_candidates]
 

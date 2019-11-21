@@ -47,7 +47,8 @@ def setup(**kwargs):
     )
 
     zincs, zinc2feature = load_zinc_features(
-        'data/davis2011kinase/cayman_jtnnvae_molonly.txt',
+        'data/docking/mol_samples_jtnnvae_molonly.txt',
+        #'data/davis2011kinase/cayman_jtnnvae_molonly.txt',
         set({ chem2zinc[chem] for chem in chem2zinc })
     )
 

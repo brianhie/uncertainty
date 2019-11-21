@@ -1,11 +1,10 @@
-import GPy
 import gpytorch
 from joblib import Parallel, delayed
 from math import ceil
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
-#from gpr import GaussianProcessRegressor
 import torch
+#from gpr import GaussianProcessRegressor
 
 from utils import tprint
 
@@ -64,6 +63,7 @@ class GPRegressor(object):
 
         # GPy backend.
         elif self.backend_ == 'gpy':
+            import GPy
             if self.kernel_ == 'rbf':
                 kernel = GPy.kern.RBF(
                     input_dim=n_features, variance=1., lengthscale=1.
@@ -166,7 +166,7 @@ class SparseGPRegressor(object):
             n_inducing=1000,
             method='geoskech',
             n_restarts=0,
-            kernel='rbf',
+            kernel=None,
             backend='sklearn',
             batch_size=1000,
             n_jobs=1,

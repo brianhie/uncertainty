@@ -283,7 +283,7 @@ def train(regress_type='hybrid', **kwargs):
 
     regressor.fit(X_obs, y_obs)
 
-    print(regressor.model_.kernel_.get_params())
+    #print(regressor.model_.kernel_.get_params())
 
     kwargs['regressor'] = regressor
 
