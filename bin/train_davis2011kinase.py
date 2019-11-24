@@ -1,9 +1,10 @@
+from utils import tprint, plt
+from process_davis2011kinase import process, visualize_heatmap
+
 import numpy as np
 import scipy.stats as ss
 import seaborn as sns
-
-from utils import tprint, plt
-from process_davis2011kinase import process, visualize_heatmap
+import sys
 
 def mlp_ensemble_diverse1():
     from mlp_ensemble import MLPEnsembleRegressor
@@ -191,8 +192,8 @@ def train(regress_type='hybrid', **kwargs):
         regressor = BayesianNN(
             n_hidden1=200,
             n_hidden2=200,
-            n_iter=5000,
-            n_posterior_samples=200,
+            n_iter=1000,
+            n_posterior_samples=100,
             verbose=True,
         )
 
@@ -202,7 +203,7 @@ def train(regress_type='hybrid', **kwargs):
         regressor = GPRegressor(
             kernel=C(1., 'fixed') * RBF(1., 'fixed'),
             backend='sklearn',
-            n_jobs=30,
+            n_jobs=10,
             verbose=True
         )
     elif regress_type == 'gpfactorized':
@@ -215,7 +216,7 @@ def train(regress_type='hybrid', **kwargs):
             ),
             backend='sklearn',
             n_restarts=0,
-            n_jobs=30,
+            n_jobs=10,
             verbose=True
         )
     elif regress_type == 'sparsegp':
@@ -225,7 +226,7 @@ def train(regress_type='hybrid', **kwargs):
             n_inducing=8000,
             backend='sklearn',
             n_restarts=10,
-            n_jobs=30,
+            n_jobs=10,
             verbose=True
         )
 
@@ -241,7 +242,7 @@ def train(regress_type='hybrid', **kwargs):
             GPRegressor(
                 backend='sklearn',#'gpytorch',
                 n_restarts=10,
-                n_jobs=30,
+                n_jobs=10,
                 verbose=True,
             ),
         )
@@ -258,7 +259,7 @@ def train(regress_type='hybrid', **kwargs):
             GPRegressor(
                 backend='sklearn',#'gpytorch',
                 n_restarts=10,
-                n_jobs=30,
+                n_jobs=10,
                 verbose=True,
             ),
         )
@@ -276,7 +277,7 @@ def train(regress_type='hybrid', **kwargs):
                 n_inducing=8000,
                 backend='sklearn',
                 n_restarts=10,
-                n_jobs=30,
+                n_jobs=10,
                 verbose=True
             ),
         )
@@ -338,4 +339,6 @@ def analyze_regressor(**kwargs):
                 'unknown_novel')
 
 if __name__ == '__main__':
-    analyze_regressor(**train(regress_type='gpfactorized', **process()))
+    regress_type = sys.argv[1]
+
+    analyze_regressor(**train(regress_type=regress_type, **process()))

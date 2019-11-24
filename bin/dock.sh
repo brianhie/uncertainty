@@ -8,6 +8,7 @@ out_dirname=$docking_dir/docked_files
 log_dirname=$docking_dir/log_files
 
 ls $input_dirname | \
+    grep 'design_gp' | \
     grep '\.pdbqt' | \
     grep -v 2FUM | \
     while read ligand_fname

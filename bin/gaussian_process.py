@@ -32,7 +32,7 @@ class GPRegressor(object):
     def __init__(
             self,
             n_restarts=0,
-            kernel='rbf',
+            kernel=None,
             backend='sklearn',
             batch_size=1000,
             n_jobs=1,

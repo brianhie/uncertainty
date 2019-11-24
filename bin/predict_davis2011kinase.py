@@ -1,3 +1,5 @@
+from utils import mkdir_p, tprint
+
 import numpy as np
 import os
 import sys
@@ -5,7 +7,6 @@ import sys
 from iterate_davis2011kinase import acquire, acquisition_rank, acquisition_scatter
 from process_davis2011kinase import process, visualize_heatmap
 from train_davis2011kinase import train
-from utils import mkdir_p, tprint
 
 def load_chem_zinc(fname, chems):
     chem2zinc = {}

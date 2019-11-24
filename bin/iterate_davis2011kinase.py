@@ -1,8 +1,9 @@
+from utils import tprint, plt
+
 import numpy as np
 from scipy.stats import rankdata
 import sys
 
-from utils import tprint, plt
 from gaussian_process import SparseGPRegressor
 from hybrid import HybridMLPEnsembleGP
 from process_davis2011kinase import process, visualize_heatmap
@@ -349,7 +350,7 @@ if __name__ == '__main__':
     param_dict['scheme'] = sys.argv[2]
     param_dict['n_candidates'] = int(sys.argv[3])
 
-    n_iter = 5
+    n_iter = 1
 
     for i in range(n_iter):
         tprint('Iteration {}'.format(i))
