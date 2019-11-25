@@ -6,6 +6,13 @@ import seaborn as sns
 def parse_log(model, fname):
     data = []
 
+    if 'hybrid' in model or 'gp' in model:
+        uncertainty = 'GP-based uncertainty'
+    elif model == 'mlper5g' or model == 'bayesnn':
+        uncertainty = 'Other uncertainty'
+    else:
+        uncertainty = 'No uncertainty'
+
     with open(fname) as f:
         for line in f:
             if not (line.startswith('2019-') or line.startswith('2020-')):
@@ -28,13 +35,6 @@ def parse_log(model, fname):
             else:
                 continue
 
-            if 'hybrid' in model or 'gp' in model:
-                uncertainty = 'GP-based uncertainty'
-            elif model == 'mlper5g' or model == 'bayesnn':
-                uncertainty = 'Other uncertainty'
-            else:
-                uncertainty = 'No uncertainty'
-
             data.append([ model, metric, quadrant, value, uncertainty ])
 
     return data
@@ -43,11 +43,11 @@ if __name__ == '__main__':
     models = [
         'gp',
         'hybrid',
-        #'dhybrid',
+        'dhybrid',
         'bayesnn',
         'mlper5g',
         'mlper1',
-        #'dmlper1',
+        'dmlper1',
         'cmf',
     ]
 

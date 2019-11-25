@@ -33,40 +33,10 @@ def mlp_ensemble(n_neurons=500, n_regressors=5, n_epochs=100,
 
     return mlper
 
-def error_histogram(y_pred, y, regress_type, prefix=''):
-    # Histogram of squared errors.
-    plt.figure()
-    plt.hist(np.power(y_pred - y, 2), bins=50)
-    plt.xlabel('Squared Error')
-    plt.savefig('figures/mse_histogram_{}regressors{}.png'
-                .format(prefix, regress_type), dpi=200)
-    plt.close()
-
-def mean_var_heatmap(idx, y_pred, var_pred, Kds, regress_type, prefix=''):
-    means = np.zeros(Kds.shape)
-    for idx, mean in zip(idx, y_pred):
-        means[idx] = mean
-    visualize_heatmap(means,
-                      '{}mearegress_type{}'.format(prefix, regress_type))
-    variances = np.zeros(Kds.shape)
-    for idx, variance in zip(idx, var_pred):
-        variances[idx] = variance
-    visualize_heatmap(variances,
-                      '{}variance_regressors{}'.format(prefix, regress_type))
-
 def score_scatter(y_pred, y, var_pred, regress_type, prefix=''):
-    plt.figure()
-    if var_pred.max() - var_pred.min() == 0:
-        var_color = np.ones(len(var_pred))
-    else:
-        var_color = (var_pred - var_pred.min()) / (var_pred.max() - var_pred.min())
-    plt.scatter(y, y_pred, alpha=0.3, c=var_color)
-    plt.viridis()
-    plt.xlabel('Real score')
-    plt.ylabel('Predicted score')
-    plt.savefig('figures/pred_vs_true_{}regressors{}.png'
-                .format(prefix, regress_type), dpi=200)
-    plt.close()
+    y_pred = y_pred[:]
+    y_pred[y_pred < 0] = 0
+    y_pred[y_pred > 10000] = 10000
 
     plt.figure()
     plt.scatter(y_pred, var_pred, alpha=0.3,
@@ -75,25 +45,8 @@ def score_scatter(y_pred, y, var_pred, regress_type, prefix=''):
     plt.xlabel('Predicted score')
     plt.ylabel('Variance')
     plt.savefig('figures/variance_vs_pred_{}regressors{}.png'
-                .format(prefix, regress_type), dpi=200)
+                .format(prefix, regress_type), dpi=300)
     plt.close()
-
-    plt.figure()
-    plt.scatter(y, var_pred, alpha=0.3,
-                c=(y_pred - y_pred.min()) / (y_pred.max() - y_pred.min()))
-    plt.viridis()
-    plt.xlabel('Real score')
-    plt.ylabel('Variance')
-    plt.savefig('figures/variance_vs_true_{}regressors{}.png'
-                .format(prefix, regress_type), dpi=200)
-    plt.close()
-
-    np.savetxt('target/variance_{}regressors{}.txt'
-               .format(prefix, regress_type), var_pred)
-    np.savetxt('target/ypred_{}regressors{}.txt'
-               .format(prefix, regress_type), y_pred)
-    np.savetxt('target/ytrue_{}regressors{}.txt'
-               .format(prefix, regress_type), y)
 
 def error_print(y_pred, y, namespace):
     tprint('MAE for {}: {}'
@@ -316,11 +269,9 @@ def analyze_regressor(**kwargs):
     var_obs_pred = regressor.uncertainties_
     assert(len(y_obs_pred) == len(var_obs_pred) == X_obs.shape[0])
 
-    error_histogram(y_obs_pred, y_obs,
-                    regress_type, 'observed_')
+    error_print(y_obs_pred, y_obs, 'observed')
     score_scatter(y_obs_pred, y_obs, var_obs_pred,
                   regress_type, 'observed_')
-    error_print(y_obs_pred, y_obs, 'observed')
 
     # Analyze unknown dataset.
 
@@ -331,11 +282,9 @@ def analyze_regressor(**kwargs):
     var_unk_pred = regressor.uncertainties_
     assert(len(y_unk_pred) == len(var_unk_pred) == X_unk.shape[0])
 
-    error_histogram(y_unk_pred, y_unk,
-                    regress_type, 'unknown_')
+    error_print(y_unk_pred, y_unk, 'unknown_all')
     score_scatter(y_unk_pred, y_unk, var_unk_pred,
                   regress_type, 'unknown_')
-    error_print(y_unk_pred, y_unk, 'unknown_all')
 
     # Stratify unknown dataset into quadrants.
 
