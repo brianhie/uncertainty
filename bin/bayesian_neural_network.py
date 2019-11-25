@@ -6,8 +6,6 @@ import tensorflow as tf
 
 from utils import tprint
 
-ed.set_seed(0)
-
 def neural_network(X, W_0, W_1, W_2, b_0, b_1, b_2):
     h = tf.nn.relu(tf.matmul(X, W_0) + b_0)
     h = tf.nn.relu(tf.matmul(h, W_1) + b_1)
@@ -22,8 +20,12 @@ class BayesianNN(object):
             n_iter=1000,
             n_posterior_samples=100,
             batch_size=500,
+            random_state=0,
             verbose=False,
     ):
+        if random_state is not None:
+            ed.set_seed(random_state)
+
         self.n_hidden1_ = n_hidden1
         self.n_hidden2_ = n_hidden2
         self.n_iter_ = n_iter

@@ -6,8 +6,6 @@ from keras.activations import softplus
 
 from utils import tprint
 
-tf.set_random_seed(1)
-
 def check_param_length(param, n_regressors):
     if len(param) != n_regressors:
         raise ValueError('Invalid parameter list length')
@@ -37,8 +35,12 @@ class MLPEnsembleRegressor(object):
                  momentums=0.9,
                  nesterovs_momentums=True,
                  backend='keras',
+                 random_state=1,
                  verbose=False,
     ):
+        if random_state is not None:
+            tf.set_random_seed(random_state)
+
         self.backend_ = backend
         self.verbose_ = verbose
 

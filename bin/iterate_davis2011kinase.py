@@ -310,7 +310,10 @@ def iterate(**kwargs):
     regressor = kwargs['regressor']
     regress_type = kwargs['regress_type']
 
-    kwargs['y_unk_pred'] = regressor.predict(X_unk)
+    if regress_type == 'cmf':
+        kwargs['y_unk_pred'] = regressor.predict(idx_unk)
+    else:
+        kwargs['y_unk_pred'] = regressor.predict(X_unk)
     kwargs['var_unk_pred'] = regressor.uncertainties_
 
     acquired, kwargs = acquire(**kwargs)
@@ -346,9 +349,18 @@ if __name__ == '__main__':
 
     param_dict = process()
 
-    param_dict['regress_type'] = sys.argv[1]
-    param_dict['scheme'] = sys.argv[2]
-    param_dict['n_candidates'] = int(sys.argv[3])
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('regress_type', help='model to use')
+    parser.add_argument('scheme', help='acquisition strategy')
+    parser.add_argument('n_candidates', type=int, help='number to acquire')
+    parser.add_argument('--seed', type=int, default=1, help='random seed')
+    args = parser.parse_args()
+
+    param_dict['regress_type'] = args.regress_type
+    param_dict['scheme'] = args.scheme
+    param_dict['n_candidates'] = args.n_candidates
+    param_dict['seed'] = args.seed
 
     n_iter = 1
 

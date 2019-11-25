@@ -4,32 +4,12 @@ from process_davis2011kinase import process, visualize_heatmap
 import numpy as np
 import scipy.stats as ss
 import seaborn as sns
+from sklearn.metrics import mean_absolute_error as mae
+from sklearn.metrics import mean_squared_error as mse
 import sys
 
-def mlp_ensemble_diverse1():
-    from mlp_ensemble import MLPEnsembleRegressor
-
-    layer_sizes_list = [ (500, 500) for _ in range(40) ]
-
-    max_iters = [ 500 for _ in range(40) ]
-
-    mlper = MLPEnsembleRegressor(
-        layer_sizes_list,
-        activations='relu',
-        solvers='adam',
-        alphas=0.0001,
-        batch_sizes=500,
-        max_iters=max_iters,
-        momentums=0.9,
-        nesterovs_momentums=True,
-        backend='keras',
-        verbose=True,
-    )
-
-    return mlper
-
 def mlp_ensemble(n_neurons=500, n_regressors=5, n_epochs=100,
-                 n_hidden_layers=2, loss='mse'):
+                 n_hidden_layers=2, loss='mse', seed=1,):
     from mlp_ensemble import MLPEnsembleRegressor
 
     layer_sizes_list = []
@@ -47,6 +27,7 @@ def mlp_ensemble(n_neurons=500, n_regressors=5, n_epochs=100,
         momentums=0.9,
         nesterovs_momentums=True,
         backend='keras',
+        random_state=seed,
         verbose=True,
     )
 
@@ -115,14 +96,16 @@ def score_scatter(y_pred, y, var_pred, regress_type, prefix=''):
                .format(prefix, regress_type), y)
 
 def error_print(y_pred, y, namespace):
+    tprint('MAE for {}: {}'
+           .format(namespace, mae(y_pred, y)))
     tprint('MSE for {}: {}'
-           .format(namespace, np.linalg.norm(y_pred - y)))
+           .format(namespace, mse(y_pred, y)))
     tprint('Pearson rho for {}: {}'
            .format(namespace, ss.pearsonr(y_pred, y)))
     tprint('Spearman r for {}: {}'
            .format(namespace, ss.spearmanr(y_pred, y)))
 
-def train(regress_type='hybrid', **kwargs):
+def train(regress_type='hybrid', seed=1, **kwargs):
     X_obs = kwargs['X_obs']
     y_obs = kwargs['y_obs']
     Kds = kwargs['Kds']
@@ -157,6 +140,7 @@ def train(regress_type='hybrid', **kwargs):
             n_neurons=200,
             n_regressors=1,
             n_epochs=50,
+            seed=seed,
         )
     elif regress_type == 'dmlper1':
         regressor = mlp_ensemble(
@@ -164,6 +148,7 @@ def train(regress_type='hybrid', **kwargs):
             n_regressors=1,
             n_hidden_layers=15,
             n_epochs=300,
+            seed=seed,
         )
     elif regress_type == 'mlper1g':
         regressor = mlp_ensemble(
@@ -171,6 +156,7 @@ def train(regress_type='hybrid', **kwargs):
             n_regressors=1,
             n_epochs=100,
             loss='gaussian_nll',
+            seed=seed,
         )
 
     elif regress_type == 'mlper5':
@@ -178,6 +164,7 @@ def train(regress_type='hybrid', **kwargs):
             n_neurons=200,
             n_regressors=5,
             n_epochs=100,
+            seed=seed,
         )
     elif regress_type == 'mlper5g':
         regressor = mlp_ensemble(
@@ -185,6 +172,7 @@ def train(regress_type='hybrid', **kwargs):
             n_regressors=5,
             n_epochs=50,
             loss='gaussian_nll',
+            seed=seed,
         )
 
     elif regress_type == 'bayesnn':
@@ -194,7 +182,23 @@ def train(regress_type='hybrid', **kwargs):
             n_hidden2=200,
             n_iter=1000,
             n_posterior_samples=100,
+            random_state=seed,
             verbose=True,
+        )
+
+    elif regress_type == 'cmf':
+        from cmf_regressor import CMFRegressor
+        regressor = CMFRegressor(
+            n_components=30,
+            seed=seed,
+        )
+        regressor.fit(
+            kwargs['chems'],
+            kwargs['prots'],
+            kwargs['chem2feature'],
+            kwargs['prot2feature'],
+            kwargs['Kds'],
+            kwargs['idx_obs'],
         )
 
     elif regress_type == 'gp':
@@ -238,6 +242,7 @@ def train(regress_type='hybrid', **kwargs):
                 n_neurons=200,
                 n_regressors=1,
                 n_epochs=50,
+                seed=seed,
             ),
             GPRegressor(
                 backend='sklearn',#'gpytorch',
@@ -255,6 +260,7 @@ def train(regress_type='hybrid', **kwargs):
                 n_regressors=1,
                 n_hidden_layers=15,
                 n_epochs=300,
+                seed=seed,
             ),
             GPRegressor(
                 backend='sklearn',#'gpytorch',
@@ -271,6 +277,7 @@ def train(regress_type='hybrid', **kwargs):
                 n_neurons=200,
                 n_regressors=1,
                 n_epochs=50,
+                seed=seed,
             ),
             SparseGPRegressor(
                 method='geosketch',
@@ -282,7 +289,8 @@ def train(regress_type='hybrid', **kwargs):
             ),
         )
 
-    regressor.fit(X_obs, y_obs)
+    if regress_type not in { 'cmf' }:
+        regressor.fit(X_obs, y_obs)
 
     #print(regressor.model_.kernel_.get_params())
 
@@ -301,7 +309,10 @@ def analyze_regressor(**kwargs):
 
     # Analyze observed dataset.
 
-    y_obs_pred = regressor.predict(X_obs)
+    if regress_type == 'cmf':
+        y_obs_pred = regressor.predict(kwargs['idx_obs'])
+    else:
+        y_obs_pred = regressor.predict(X_obs)
     var_obs_pred = regressor.uncertainties_
     assert(len(y_obs_pred) == len(var_obs_pred) == X_obs.shape[0])
 
@@ -313,7 +324,10 @@ def analyze_regressor(**kwargs):
 
     # Analyze unknown dataset.
 
-    y_unk_pred = regressor.predict(X_unk)
+    if regress_type == 'cmf':
+        y_unk_pred = regressor.predict(kwargs['idx_unk'])
+    else:
+        y_unk_pred = regressor.predict(X_unk)
     var_unk_pred = regressor.uncertainties_
     assert(len(y_unk_pred) == len(var_unk_pred) == X_unk.shape[0])
 
@@ -339,6 +353,14 @@ def analyze_regressor(**kwargs):
                 'unknown_novel')
 
 if __name__ == '__main__':
-    regress_type = sys.argv[1]
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('regress_type', help='model to use')
+    parser.add_argument('--seed', type=int, default=1, help='random seed')
+    args = parser.parse_args()
 
-    analyze_regressor(**train(regress_type=regress_type, **process()))
+    analyze_regressor(**train(
+        regress_type=args.regress_type,
+        seed=args.seed,
+        **process()
+    ))
