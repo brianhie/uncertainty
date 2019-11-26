@@ -1,7 +1,8 @@
-from utils import mkdir_p, tprint
+from utils import mkdir_p, plt, tprint
 
 import numpy as np
 import os
+import seaborn as sns
 import sys
 
 from iterate_davis2011kinase import acquire, acquisition_rank, acquisition_scatter
@@ -48,8 +49,8 @@ def setup(**kwargs):
     )
 
     zincs, zinc2feature = load_zinc_features(
-        'data/docking/mol_samples_jtnnvae_molonly.txt',
-        #'data/davis2011kinase/cayman_jtnnvae_molonly.txt',
+        #'data/docking/mol_samples_jtnnvae_molonly.txt',
+        'data/davis2011kinase/cayman_jtnnvae_molonly.txt',
         set({ chem2zinc[chem] for chem in chem2zinc })
     )
 
@@ -102,6 +103,68 @@ def setup(**kwargs):
 
     return kwargs
 
+def latent_scatter(var_unk_pred, **kwargs):
+    chems = kwargs['chems']
+    chem2feature = kwargs['chem2feature']
+    idx_obs = kwargs['idx_obs']
+    idx_unk = kwargs['idx_unk']
+    regress_type = kwargs['regress_type']
+
+    chem_idx_obs = sorted(set([ i for i, _ in idx_obs ]))
+    chem_idx_unk = sorted(set([ i for i, _ in idx_unk ]))
+
+    feature_obs = np.array([
+        chem2feature[chems[i]] for i in chem_idx_obs
+    ])
+    feature_unk = np.array([
+        chem2feature[chems[i]] for i in chem_idx_unk
+    ])
+
+    X = np.vstack([ feature_obs, feature_unk ])
+    labels = np.concatenate([
+        np.zeros(len(chem_idx_obs)), np.ones(len(chem_idx_unk))
+    ])
+
+    from fbpca import pca
+    U, s, Vt = pca(X, k=3,)
+    X_pca = U * s
+
+    from umap import UMAP
+    um = UMAP(
+        n_neighbors=15,
+        min_dist=0.1,
+        n_components=2,
+        metric='euclidean',
+    )
+    X_umap = um.fit_transform(X)
+
+    from MulticoreTSNE import MulticoreTSNE as TSNE
+    tsne = TSNE(
+        n_components=2,
+        n_jobs=20,
+    )
+    X_tsne = tsne.fit_transform(X)
+
+    for name, coords in zip(
+            [ 'pca', 'umap', 'tsne' ],
+            [ X_pca, X_umap, X_tsne ],
+    ):
+        plt.figure()
+        sns.scatterplot(x=coords[labels == 1, 0], y=coords[labels == 1, 1],
+                        color='blue', alpha=0.3,)
+        sns.scatterplot(x=coords[labels == 0, 0], y=coords[labels == 0, 1],
+                        color='orange', alpha=1.0, marker='x')
+        plt.savefig('figures/latent_scatter_{}_{}.png'
+                    .format(name, regress_type), dpi=300)
+        plt.close()
+
+        plt.figure()
+        sns.scatterplot(x=coords[labels == 1, 0], y=coords[labels == 1, 1],
+                        hue=var_unk_pred, alpha=0.3,)
+        plt.savefig('figures/latent_scatter_{}_var_{}.png'
+                    .format(name, regress_type), dpi=300)
+        plt.close()
+
 def predict(**kwargs):
     X_unk = kwargs['X_unk']
     regress_type = kwargs['regress_type']
@@ -128,8 +191,7 @@ def predict(**kwargs):
         np.save('target/prediction_cache/{}_varpred.npy'
                 .format(regress_type), var_unk_pred)
 
-    y_pred_cutoff = 2000000.
-    y_unk_pred[y_unk_pred > y_pred_cutoff] = y_pred_cutoff
+    latent_scatter(var_unk_pred, **kwargs)
 
     acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
     acquisition_scatter(y_unk_pred, var_unk_pred, acquisition,

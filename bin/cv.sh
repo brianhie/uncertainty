@@ -1,4 +1,4 @@
-python bin/train_davis2011kinase.py gp >> train_davis2011kinase_gp.log 2>&1 &
+#python bin/train_davis2011kinase.py gp >> train_davis2011kinase_gp.log 2>&1 &
 
 for i in {0..4}
 do

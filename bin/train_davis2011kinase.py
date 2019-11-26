@@ -68,19 +68,9 @@ def train(regress_type='hybrid', seed=1, **kwargs):
     n_features_chem = kwargs['n_features_chem']
     n_features_prot = kwargs['n_features_prot']
 
+    # Debug.
     #X_obs = X_obs[:10]
     #y_obs = y_obs[:10]
-
-    # Balance the training set.
-    #positive_idx = y_obs > 0
-    #zero_idx = y_obs == 0
-    #if sum(zero_idx) > sum(positive_idx):
-    #    balanced_idx = list(sorted(np.hstack((
-    #        np.where(positive_idx)[0],
-    #        np.random.choice(np.where(zero_idx)[0], sum(positive_idx), replace=False)
-    #    ))))
-    #    X_obs = X_obs[balanced_idx]
-    #    y_obs = y_obs[balanced_idx]
 
     # Fit the model.
 
@@ -245,7 +235,7 @@ def train(regress_type='hybrid', seed=1, **kwargs):
     if regress_type not in { 'cmf' }:
         regressor.fit(X_obs, y_obs)
 
-    #print(regressor.model_.kernel_.get_params())
+    #print(regressor.model_.kernel_.get_params()) # Debug.
 
     kwargs['regressor'] = regressor
 

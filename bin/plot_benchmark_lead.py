@@ -57,11 +57,11 @@ if __name__ == '__main__':
     models = [
         'gp',
         'hybrid',
-        'dhybrid',
-        #'bayesnn',
+        #'dhybrid',
+        'bayesnn',
         'mlper5g',
         'mlper1',
-        'dmlper1',
+        #'dmlper1',
         'cmf',
     ]
 

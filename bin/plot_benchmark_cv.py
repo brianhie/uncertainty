@@ -26,7 +26,7 @@ def parse_log(model, fname):
 
             [ quadrant, log_body ] = log_body.split(': ')
 
-            if metric == 'MAE':
+            if metric == 'MAE' or metric == 'MSE':
                 value = float(log_body)
             elif metric == 'Pearson rho':
                 value = float(log_body.strip('()').split(',')[0])
@@ -43,11 +43,11 @@ if __name__ == '__main__':
     models = [
         'gp',
         'hybrid',
-        'dhybrid',
+        #'dhybrid',
         'bayesnn',
         'mlper5g',
         'mlper1',
-        'dmlper1',
+        #'dmlper1',
         'cmf',
     ]
 
@@ -73,6 +73,8 @@ if __name__ == '__main__':
                         order=models, hue='uncertainty', dodge=False,
                         palette=sns.color_palette("RdBu", n_colors=8))
             sns.swarmplot(x='model', y='value', data=df_subset, color='black')
+            if metric == 'Pearson rho' and quadrant != 'unknown_all':
+                plt.ylim([ -0.05, 0.7 ])
             plt.savefig('figures/benchmark_cv_{}_{}.svg'
                         .format(metric, quadrant))
             plt.close()
