@@ -16,9 +16,12 @@ def acquisition_ucb(y_pred, var_pred, beta=1.):
     return y_pred - (beta * var_pred)
 
 def acquisition_scatter(y_unk_pred, var_unk_pred, acquisition, regress_type):
+    y_unk_pred = y_unk_pred[:]
+    y_unk_pred[y_unk_pred > 10000] = 10000
+
     plt.figure()
-    plt.scatter(y_unk_pred, var_unk_pred, alpha=0.1, c=acquisition)
-    plt.viridis()
+    plt.scatter(y_unk_pred, var_unk_pred, alpha=0.5, c=-acquisition,
+                cmap='hot')
     plt.title(regress_type.title())
     plt.xlabel('Predicted score')
     plt.ylabel('Variance')

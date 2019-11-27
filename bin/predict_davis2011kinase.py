@@ -1,7 +1,9 @@
 from utils import mkdir_p, plt, tprint
 
+import matplotlib.cm as cm
 import numpy as np
 import os
+import scipy.stats as ss
 import seaborn as sns
 import sys
 
@@ -103,7 +105,7 @@ def setup(**kwargs):
 
     return kwargs
 
-def latent_scatter(var_unk_pred, **kwargs):
+def latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs):
     chems = kwargs['chems']
     chem2feature = kwargs['chem2feature']
     idx_obs = kwargs['idx_obs']
@@ -124,6 +126,7 @@ def latent_scatter(var_unk_pred, **kwargs):
     labels = np.concatenate([
         np.zeros(len(chem_idx_obs)), np.ones(len(chem_idx_unk))
     ])
+    sidx = np.argsort(-var_unk_pred)
 
     from fbpca import pca
     U, s, Vt = pca(X, k=3,)
@@ -132,7 +135,7 @@ def latent_scatter(var_unk_pred, **kwargs):
     from umap import UMAP
     um = UMAP(
         n_neighbors=15,
-        min_dist=0.1,
+        min_dist=0.5,
         n_components=2,
         metric='euclidean',
     )
@@ -151,17 +154,24 @@ def latent_scatter(var_unk_pred, **kwargs):
     ):
         plt.figure()
         sns.scatterplot(x=coords[labels == 1, 0], y=coords[labels == 1, 1],
-                        color='blue', alpha=0.3,)
-        sns.scatterplot(x=coords[labels == 0, 0], y=coords[labels == 0, 1],
-                        color='orange', alpha=1.0, marker='x')
+                        color='blue', alpha=0.1,)
+        plt.scatter(x=coords[labels == 0, 0], y=coords[labels == 0, 1],
+                    color='orange', alpha=1.0, marker='x', linewidths=10,)
         plt.savefig('figures/latent_scatter_{}_{}.png'
                     .format(name, regress_type), dpi=300)
         plt.close()
 
         plt.figure()
-        sns.scatterplot(x=coords[labels == 1, 0], y=coords[labels == 1, 1],
-                        hue=var_unk_pred, alpha=0.3,)
+        plt.scatter(x=coords[labels == 1, 0], y=coords[labels == 1, 1],
+                    c=ss.rankdata(var_unk_pred), alpha=0.1, cmap='coolwarm')
         plt.savefig('figures/latent_scatter_{}_var_{}.png'
+                    .format(name, regress_type), dpi=300)
+        plt.close()
+
+        plt.figure()
+        plt.scatter(x=coords[labels == 1, 0], y=coords[labels == 1, 1],
+                    c=-acquisition, alpha=0.1, cmap='hot')
+        plt.savefig('figures/latent_scatter_{}_acq_{}.png'
                     .format(name, regress_type), dpi=300)
         plt.close()
 
@@ -184,18 +194,20 @@ def predict(**kwargs):
         kwargs = train(**kwargs)
         regressor = kwargs['regressor']
 
-        y_unk_pred = regressor.predict(X_unk)
+        if regress_type == 'cmf':
+            y_unk_pred = regressor.predict(kwargs['idx_unk'])
+        else:
+            y_unk_pred = regressor.predict(X_unk)
         var_unk_pred = regressor.uncertainties_
         np.save('target/prediction_cache/{}_ypred.npy'
                 .format(regress_type), y_unk_pred)
         np.save('target/prediction_cache/{}_varpred.npy'
                 .format(regress_type), var_unk_pred)
 
-    latent_scatter(var_unk_pred, **kwargs)
-
     acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
     acquisition_scatter(y_unk_pred, var_unk_pred, acquisition,
                         regress_type)
+    latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs)
 
     kwargs['y_unk_pred'] = y_unk_pred
     kwargs['var_unk_pred'] = var_unk_pred
