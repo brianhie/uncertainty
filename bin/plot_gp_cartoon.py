@@ -18,8 +18,6 @@ def f(x):
     return 10 * np.sin(x)
 
 if __name__ == '__main__':
-    # ----------------------------------------------------------------------
-    #  First the noiseless case
     X = np.atleast_2d([ 5.2, 6., 7., 8.7, 8.7, 10., 11., 11.7, 15.5, 16]).T
 
     # Observations and noise
