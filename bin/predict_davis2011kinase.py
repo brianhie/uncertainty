@@ -207,7 +207,9 @@ def predict(**kwargs):
     acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
     acquisition_scatter(y_unk_pred, var_unk_pred, acquisition,
                         regress_type)
-    latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs)
+
+    # Plot visualization of chemical latent space.
+    #latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs)
 
     kwargs['y_unk_pred'] = y_unk_pred
     kwargs['var_unk_pred'] = var_unk_pred

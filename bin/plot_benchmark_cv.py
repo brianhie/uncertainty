@@ -72,9 +72,13 @@ if __name__ == '__main__':
             sns.barplot(x='model', y='value', data=df_subset, ci=None,
                         order=models, hue='uncertainty', dodge=False,
                         palette=sns.color_palette("RdBu", n_colors=8))
-            sns.swarmplot(x='model', y='value', data=df_subset, color='black')
-            if metric == 'Pearson rho' and quadrant != 'unknown_all':
+            sns.swarmplot(x='model', y='value', data=df_subset, color='black',
+                          order=models)
+            if (metric == 'Pearson rho' or metric == 'Spearman r') \
+               and quadrant != 'unknown_all':
                 plt.ylim([ -0.05, 0.7 ])
+            if metric == 'MSE' and quadrant != 'unknown_all':
+                plt.ylim([ -0.01e7, 3e7 ])
             plt.savefig('figures/benchmark_cv_{}_{}.svg'
                         .format(metric, quadrant))
             plt.close()

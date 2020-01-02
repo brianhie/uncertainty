@@ -148,7 +148,7 @@ def train(regress_type='hybrid', seed=1, **kwargs):
         from gaussian_process import GPRegressor
         from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
         regressor = GPRegressor(
-            kernel=C(1., 'fixed') * RBF(1., 'fixed'),
+            kernel=C(10000., 'fixed') * RBF(1., 'fixed'),
             backend='sklearn',
             n_jobs=10,
             verbose=True
@@ -215,6 +215,7 @@ def train(regress_type='hybrid', seed=1, **kwargs):
     elif regress_type == 'sparsehybrid':
         from gaussian_process import SparseGPRegressor
         from hybrid import HybridMLPEnsembleGP
+        from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
         regressor = HybridMLPEnsembleGP(
             mlp_ensemble(
                 n_neurons=200,
