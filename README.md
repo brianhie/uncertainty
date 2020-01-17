@@ -1,4 +1,4 @@
-# Code for "Robust Machine Learning for Biological Discovery and Design"
+## Code for "Robust Machine Learning for Biological Discovery and Design"
 
 This repository contains the analysis source code necessary for reproducing the results in the paper.
 
