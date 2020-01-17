@@ -1,6 +1,6 @@
 ## Code for "Robust Machine Learning for Biological Discovery and Design"
 
-This repository contains the analysis source code necessary for reproducing the results in the paper.
+This repository contains the analysis source code used in the paper.
 
 ### Data
 
