@@ -23,9 +23,9 @@ which will launch the CV experiments for various models at different seeds imple
 
 The command for running the prediction-based discovery experiments (to identify new candidate inhibitors in the ZINC/Cayman dataset) is
 ```
-bash exploit.sh
+python bin/predict_davis2011kinase.py MODEL exploit N_CANDIDATES > predict.log 2>&1
 ```
-which will launch the experiments for various models at different seeds implemented in `bin/iterate_davis2011kinase.py`.
+which will launch a prediction experiment for the `MODEL` (one of `gp`, `sparsehybrid`, or `mlper1` for the GP, MLP + GP, or MLP, respectively) and where `N_CANDIDATES` is the number of compounds to acquire.
 
 ### Docking experiments
 
