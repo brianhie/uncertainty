@@ -7,6 +7,8 @@ conf_fname=$input_dirname/2FUM_chainA_nohet_conf.txt
 out_dirname=$docking_dir/docked_files
 log_dirname=$docking_dir/log_files
 
+ledock $input_dirname/2FUM_chainA_nohet_conf_ledock.txt &
+
 rdock_dir=$docking_dir/rdock_files
 export RBT_ROOT=$rdock_dir
 
@@ -27,8 +29,6 @@ ls $input_dirname | \
             -p $rdock_dir/data/scripts/dock.prm \
             -n 25
     done
-
-exit
 
 ls $input_dirname | \
     #grep 'design_' | \
@@ -64,8 +64,6 @@ ls $input_dirname | \
             --log $log_dirname/$ligand_fname.smina.log \
             --cpu 48
 
-        continue
-
         vina \
             --receptor $target_fname \
             --ligand $input_dirname/$ligand_fname \
@@ -73,3 +71,5 @@ ls $input_dirname | \
             --out $out_dirname/$ligand_fname.out.pdbqt \
             --log $log_dirname/$ligand_fname.log
     done
+
+wait
