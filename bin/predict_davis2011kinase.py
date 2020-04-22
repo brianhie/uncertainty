@@ -45,6 +45,7 @@ def setup(**kwargs):
     prot2feature = kwargs['prot2feature']
     chem2feature = kwargs['chem2feature']
     regress_type = kwargs['regress_type']
+    prot_target = kwargs['prot_target']
 
     chem2zinc = load_chem_zinc(
         'data/davis2011kinase/chem_smiles.csv', chems
@@ -74,7 +75,7 @@ def setup(**kwargs):
     idx_unk = [
         (i + orig_len_chems, j) for i in range(len(zincs))
         for j in range(len(prots))
-        if prots[j] == 'PKNB(M.tuberculosis)'
+        if prot_target is None or prots[j] == prot_target
     ]
 
     tprint('Constructing training dataset...')
@@ -178,15 +179,21 @@ def latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs):
 def predict(**kwargs):
     X_unk = kwargs['X_unk']
     regress_type = kwargs['regress_type']
+    prot_target = kwargs['prot_target']
 
     mkdir_p('target/prediction_cache')
 
-    if os.path.isfile('target/prediction_cache/{}_ypred.npy'
-                      .format(regress_type)):
-        y_unk_pred = np.load('target/prediction_cache/{}_ypred.npy'
-                             .format(regress_type))
-        var_unk_pred = np.load('target/prediction_cache/{}_varpred.npy'
-                               .format(regress_type))
+    if prot_target is None:
+        suffix = ''
+    else:
+        suffix = '_{}'.format(prot_target)
+
+    if os.path.isfile('target/prediction_cache/{}_ypred{}.npy'
+                      .format(regress_type, suffix)):
+        y_unk_pred = np.load('target/prediction_cache/{}_ypred{}.npy'
+                             .format(regress_type, suffix))
+        var_unk_pred = np.load('target/prediction_cache/{}_varpred{}.npy'
+                               .format(regress_type, suffix))
     else:
         y_unk_pred = None
 
@@ -199,10 +206,10 @@ def predict(**kwargs):
         else:
             y_unk_pred = regressor.predict(X_unk)
         var_unk_pred = regressor.uncertainties_
-        np.save('target/prediction_cache/{}_ypred.npy'
-                .format(regress_type), y_unk_pred)
-        np.save('target/prediction_cache/{}_varpred.npy'
-                .format(regress_type), var_unk_pred)
+        np.save('target/prediction_cache/{}_ypred{}.npy'
+                .format(regress_type, suffix), y_unk_pred)
+        np.save('target/prediction_cache/{}_varpred{}.npy'
+                .format(regress_type, suffix), var_unk_pred)
 
     acquisition = acquisition_rank(y_unk_pred, var_unk_pred)
     acquisition_scatter(y_unk_pred, var_unk_pred, acquisition,
@@ -235,6 +242,15 @@ if __name__ == '__main__':
     param_dict['regress_type'] = sys.argv[1]
     param_dict['scheme'] = sys.argv[2]
     param_dict['n_candidates'] = int(sys.argv[3])
+
+    if len(sys.argv) >= 5:
+        param_dict['prot_target'] = sys.argv[4].upper()
+        if param_dict['prot_target'] == 'PKNB':
+            param_dict['prot_target'] = 'PKNB(M.tuberculosis)'
+    else:
+        sys.stderr.write('Warning: Protein target not set,'
+                         'considering all kinases...\n')
+        param_dict['prot_target'] = None
 
     param_dict = setup(**param_dict)
 

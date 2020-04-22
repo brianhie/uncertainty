@@ -81,10 +81,9 @@ if __name__ == '__main__':
         df_subset = df[df.lead_num < n_lead]
 
         plt.figure()
-        sns.barplot(x='model', y='Kd', data=df_subset, ci=None,
+        sns.barplot(x='model', y='Kd', data=df_subset, ci=95,
                     order=models, hue='uncertainty', dodge=False,
-                    palette=sns.color_palette("RdBu", n_colors=8))
-        sns.swarmplot(x='model', y='Kd', data=df_subset, color='black',
-                      size=2.5)
+                    palette=sns.color_palette("RdBu", n_colors=8,),
+                    capsize=0.2,)
         plt.savefig('figures/benchmark_lead_{}.svg'.format(n_lead))
         plt.close()

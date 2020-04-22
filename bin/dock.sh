@@ -16,7 +16,7 @@ rbcavity \
     -r $input_dirname/2FUM_chainA_nohet_conf.prm \
     -was
 ls $input_dirname | \
-    #grep 'design_' | \
+    grep 'real_' | \
     grep '\.sd' | \
     grep -v 2FUM | \
     while read ligand_fname
@@ -27,11 +27,11 @@ ls $input_dirname | \
             -o $out_dirname/$ligand_fname.rdock.out \
             -r $input_dirname/2FUM_chainA_nohet_conf.prm \
             -p $rdock_dir/data/scripts/dock.prm \
-            -n 25
+            -n 50
     done
 
 ls $input_dirname | \
-    #grep 'design_' | \
+    grep 'real_' | \
     grep '\.pdbqt' | \
     grep -v 2FUM | \
     while read ligand_fname
@@ -68,8 +68,9 @@ ls $input_dirname | \
             --receptor $target_fname \
             --ligand $input_dirname/$ligand_fname \
             --config $conf_fname \
-            --out $out_dirname/$ligand_fname.out.pdbqt \
-            --log $log_dirname/$ligand_fname.log
+            --out $out_dirname/$ligand_fname.vina.out.pdbqt \
+            --log $log_dirname/$ligand_fname.vina.log \
+            --cpu 48
     done
 
 wait

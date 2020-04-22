@@ -9,7 +9,7 @@ from hybrid import HybridMLPEnsembleGP
 from process_davis2011kinase import process, visualize_heatmap
 from train_davis2011kinase import train
 
-def acquisition_rank(y_pred, var_pred, beta=1.):
+def acquisition_rank(y_pred, var_pred):
     return rankdata(y_pred) + (beta * rankdata(-var_pred))
 
 def acquisition_ucb(y_pred, var_pred, beta=1.):

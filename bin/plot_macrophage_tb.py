@@ -12,7 +12,7 @@ def parse_log(fname, conc):
             fields = line.rstrip().split(',')
             compound = fields[0]
             batch = fields[1]
-            if not batch == 'MacB':
+            if not batch.startswith('Mac'):
                 continue
             replicate = fields[2]
             entry = [
@@ -26,16 +26,7 @@ def parse_log(fname, conc):
                 data.append(entry + [ conc[c], -c, val ])
     return data
 
-if __name__ == '__main__':
-    conc = [ 50, 25, 10, 1 ]
-
-    data = parse_log('data/tb_culture_results.txt', conc)
-
-    df = pd.DataFrame(data, columns=[
-        'comp', 'batch', 'replicate', 'control',
-        'conc', 'cidx', 'fluo'
-    ])
-
+def plot_batch(df, batch):
     # Plot 50uM.
 
     df_50uM = df[df.conc == 50.]
@@ -49,7 +40,7 @@ if __name__ == '__main__':
                   order=[ 'K252a', 'SU11652', 'RIF', 'DMSO' ])
     plt.ylim([ 10, 300000 ])
     plt.yscale('log')
-    plt.savefig('figures/tb_macrophage_50uM.svg')
+    plt.savefig('figures/tb_macrophage_50uM_{}.svg'.format(batch))
     plt.close()
 
     # Plot dose-response.
@@ -67,7 +58,6 @@ if __name__ == '__main__':
         sns.lineplot(x='cidx', y='fluo', data=df_subset)
         sns.scatterplot(x='cidx', y='fluo', data=df_subset,
                         color='black')
-        #plt.hlines(mean_dmso, 0, -3, colors='r', linestyles='dashed')
         plt.hlines(mean_bkgd, 0, -3, colors='r', linestyles='dashed')
         plt.legend([ 'a', 'b', 'c', 'd' ])
         plt.ylim([ 10, 35000 ])
@@ -82,5 +72,20 @@ if __name__ == '__main__':
         print('Spearman r for {}: {:.4f}, P = {}, n = {}'
               .format(comp, r, p, len(df_subset.conc)))
 
-    plt.savefig('figures/tb_macrophage.svg')
+    plt.savefig('figures/tb_macrophage_{}.svg'.format(batch))
     plt.close()
+
+
+if __name__ == '__main__':
+    conc = [ 50, 25, 10, 1 ]
+
+    data = parse_log('data/tb_culture_results.txt', conc)
+
+    df = pd.DataFrame(data, columns=[
+        'comp', 'batch', 'replicate', 'control',
+        'conc', 'cidx', 'fluo'
+    ])
+
+    batches = sorted(set(df.batch))
+    for batch in batches:
+        plot_batch(df[df.batch == batch], batch)
