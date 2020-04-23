@@ -11,6 +11,15 @@ from iterate_davis2011kinase import acquire, acquisition_rank, acquisition_scatt
 from process_davis2011kinase import process, visualize_heatmap
 from train_davis2011kinase import train
 
+def load_acquired(acquired_fname):
+    acquired = []
+    with open(acquired_fname) as f:
+        for line in f:
+            chem, prot, Kd = line.rstrip().split()
+            Kd = float(Kd)
+            acquired.append((chem, prot, Kd))
+    return acquired
+
 def load_chem_zinc(fname, chems):
     chem2zinc = {}
     with open(fname) as f:
@@ -46,6 +55,7 @@ def setup(**kwargs):
     chem2feature = kwargs['chem2feature']
     regress_type = kwargs['regress_type']
     prot_target = kwargs['prot_target']
+    acquired = kwargs['acquired']
 
     chem2zinc = load_chem_zinc(
         'data/davis2011kinase/chem_smiles.csv', chems
@@ -72,10 +82,19 @@ def setup(**kwargs):
     idx_obs = [
         (i, j) for i in range(orig_len_chems) for j in range(len(prots))
     ]
+
+    prot2idx = { prot: prot_idx for prot_idx, prot in enumerate(prots) }
+    chem2idx = { chem: chem_idx for chem_idx, chem in enumerate(chems) }
+    acquired_pairs = {}
+    for chem, prot, Kd in acquired:
+        idx_obs.append((chem2idx[chem], prot2idx[prot]))
+        acquired_pairs[(chem, prot)] = Kd
+
     idx_unk = [
         (i + orig_len_chems, j) for i in range(len(zincs))
         for j in range(len(prots))
-        if prot_target is None or prots[j] == prot_target
+        if (chems[i + orig_len_chems], prots[j]) not in acquired_pairs and
+        (prot_target is None or prots[j] == prot_target)
     ]
 
     tprint('Constructing training dataset...')
@@ -84,7 +103,10 @@ def setup(**kwargs):
         chem = chems[i]
         prot = prots[j]
         X_obs.append(chem2feature[chem] + prot2feature[prot])
-        y_obs.append(Kds[i, j])
+        if (chem, prot) in acquired_pairs:
+            y_obs.append(acquired_pairs[(chem, prot)])
+        else:
+            y_obs.append(Kds[i, j])
     X_obs, y_obs = np.array(X_obs), np.array(y_obs)
 
     tprint('Constructing evaluation dataset...')
@@ -230,9 +252,9 @@ def repurpose(**kwargs):
 
     kwargs = predict(**kwargs)
 
-    acquired = acquire(**kwargs)[0]
+    to_acquire = acquire(**kwargs)[0]
 
-    for idx in acquired:
+    for idx in to_acquire:
         i, j = idx_unk[idx]
         tprint('Please acquire {} <--> {}'.format(chems[i], prots[j]))
 
@@ -251,6 +273,12 @@ if __name__ == '__main__':
         sys.stderr.write('Warning: Protein target not set,'
                          'considering all kinases...\n')
         param_dict['prot_target'] = None
+
+    if len(sys.argv) >= 6:
+        acquired_fname = sys.argv[5]
+        param_dict['acquired'] = load_acquired(acquired_fname)
+    else:
+        param_dict['acquired'] = []
 
     param_dict = setup(**param_dict)
 

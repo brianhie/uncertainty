@@ -9,7 +9,7 @@ from hybrid import HybridMLPEnsembleGP
 from process_davis2011kinase import process, visualize_heatmap
 from train_davis2011kinase import train
 
-def acquisition_rank(y_pred, var_pred):
+def acquisition_rank(y_pred, var_pred, beta=1.):
     return rankdata(y_pred) + (beta * rankdata(-var_pred))
 
 def acquisition_ucb(y_pred, var_pred, beta=1.):
@@ -63,7 +63,7 @@ def select_candidates(point=False, **kwargs):
         acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta=0.)
     else:
         tprint('Exploiting...')
-        acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta=20.)
+        acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta=20)
 
     max_acqs = np.argsort(-acquisition)[:n_candidates]
 
