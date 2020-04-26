@@ -1,12 +1,10 @@
 import gpytorch
 from joblib import Parallel, delayed
 from math import ceil
-import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 import torch
-#from gpr import GaussianProcessRegressor
 
-from utils import tprint
+from utils import *
 
 def parallel_predict(model, X, batch_num, n_batches, verbose):
     mean, var = model.predict(X, return_std=True)
@@ -33,6 +31,7 @@ class GPRegressor(object):
             self,
             n_restarts=0,
             kernel=None,
+            normalize_y=True,
             backend='sklearn',
             batch_size=1000,
             n_jobs=1,
@@ -40,6 +39,7 @@ class GPRegressor(object):
     ):
         self.n_restarts_ = n_restarts
         self.kernel_ = kernel
+        self.normalize_y_ = normalize_y
         self.backend_ = backend
         self.batch_size_ = batch_size
         self.n_jobs_ = n_jobs
@@ -56,7 +56,7 @@ class GPRegressor(object):
         if self.backend_ == 'sklearn':
             self.model_ = GaussianProcessRegressor(
                 kernel=self.kernel_,
-                normalize_y=True,
+                normalize_y=self.normalize_y_,
                 n_restarts_optimizer=self.n_restarts_,
                 copy_X_train=False,
             ).fit(X, y)
