@@ -8,7 +8,7 @@ def parse_log(model, fname):
     reseed = -1
     lead_num = 0
 
-    if 'hybrid' in model or 'gp' in model:
+    if model == 'gp' or 'hybrid' in model:
         uncertainty = 'GP-based uncertainty'
     elif model == 'mlper5g' or model == 'bayesnn':
         uncertainty = 'Other uncertainty'
@@ -57,11 +57,10 @@ if __name__ == '__main__':
     models = [
         'gp',
         'hybrid',
-        #'dhybrid',
         'bayesnn',
         'mlper5g',
+        'gp0',
         'mlper1',
-        #'dmlper1',
         'cmf',
     ]
 

@@ -78,6 +78,16 @@ def train(regress_type, X_train, y_train, seed=1):
             random_state=seed,
             verbose=True,
         )
+    elif regress_type == 'lbayesnn':
+        from bayesian_neural_network import BayesianNN
+        regressor = BayesianNN(
+            n_hidden1=1000,
+            n_hidden2=1000,
+            n_iter=1000,
+            n_posterior_samples=100,
+            random_state=seed,
+            verbose=True,
+        )
 
     elif regress_type == 'gp':
         from gaussian_process import GPRegressor
@@ -160,6 +170,11 @@ if __name__ == '__main__':
     model = sys.argv[1]
     beta = float(sys.argv[2])
 
+    if len(sys.argv) >= 4:
+        seed = int(sys.argv[3])
+    else:
+        seed = 1
+
     X, meta = load_embeddings(
         'data/sarkisyan2016gfp/embeddings.txt'
     )
@@ -174,7 +189,7 @@ if __name__ == '__main__':
     y_train[y_train < 0.] = 0.
     y_test[y_test < 0.] = 0.
 
-    regressor = train(model, X_train, y_train)
+    regressor = train(model, X_train, y_train, seed=seed)
     y_unk_pred = regressor.predict(X_test)
     var_unk_pred = regressor.uncertainties_
 
