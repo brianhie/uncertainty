@@ -9,7 +9,8 @@ from sklearn.metrics import mean_squared_error as mse
 import sys
 
 def mlp_ensemble(n_neurons=500, n_regressors=5, n_epochs=100,
-                 n_hidden_layers=2, loss='mse', seed=1,):
+                 n_hidden_layers=2, loss='mse', seed=1,
+                 verbose=True,):
     from mlp_ensemble import MLPEnsembleRegressor
 
     layer_sizes_list = []
@@ -28,7 +29,7 @@ def mlp_ensemble(n_neurons=500, n_regressors=5, n_epochs=100,
         nesterovs_momentums=True,
         backend='keras',
         random_state=seed,
-        verbose=True,
+        verbose=verbose,
     )
 
     return mlper

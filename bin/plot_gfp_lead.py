@@ -1,4 +1,4 @@
-from utils import plt
+from utils import *
 
 import pandas as pd
 import seaborn as sns
@@ -49,11 +49,11 @@ def parse_log(model, fname):
 if __name__ == '__main__':
     models = [
         'gp',
-        'dhybrid',
+        #'dhybrid',
         'bayesnn',
-        'dmlper5g',
+        'mlper5g',
+        'mlper1',
         'gp0',
-        'dmlper1',
     ]
 
     data = []
@@ -65,7 +65,7 @@ if __name__ == '__main__':
         'model', 'uncertainty', 'order', 'brightness', 'seed',
     ])
 
-    n_leads = [ 5, 50, 500, ]
+    n_leads = [ 5, 50, 500, 5000 ]
 
     for n_lead in n_leads:
         df_subset = df[df.order <= n_lead]
@@ -79,5 +79,35 @@ if __name__ == '__main__':
         plt.savefig('figures/gfp_lead_{}.svg'.format(n_lead))
         plt.close()
 
-    for model in [ 'gp', 'dmlper1' ]:
-        pass
+        gp_brights = df_subset[df_subset.model == 'gp'].brightness
+        for model in models:
+            if model == 'gp':
+                continue
+            other_brights = df_subset[df_subset.model == model].brightness
+            print('{} leads, t-test, GP vs {}:'.format(n_lead, model))
+            print('\tt = {:.4f}, P = {:.4g}'
+                  .format(*ss.ttest_ind(gp_brights, other_brights,
+                                        equal_var=False)))
+        print('')
+
+
+    plt.figure()
+    for model in models:
+        df_subset = df[(df.model == model) & (df.seed == 1)]
+        order = np.array(df_subset.order).ravel()
+        brightness = np.array(df_subset.brightness).ravel()
+
+        order_idx = np.argsort(order)
+        order = order[order_idx]
+        brightness = brightness[order_idx]
+
+        n_positive, n_positives = 0, []
+        for i in range(len(order)):
+            if brightness[i] > 3:
+                n_positive += 1
+            n_positives.append(n_positive)
+        plt.plot(order, n_positives)
+    frac_positive = sum(brightness > 3) / float(len(brightness))
+    plt.plot(order, frac_positive * order, c='gray', linestyle='--')
+    plt.legend(models + [ 'Random guessing' ])
+    plt.savefig('figures/gfp_acquisition.svg')#, dpi=300)

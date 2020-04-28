@@ -1,4 +1,4 @@
-from utils import plt
+from utils import *
 
 import pandas as pd
 import seaborn as sns
@@ -59,7 +59,6 @@ if __name__ == '__main__':
         'hybrid',
         'bayesnn',
         'mlper5g',
-        'gp0',
         'mlper1',
         'cmf',
     ]
@@ -84,5 +83,17 @@ if __name__ == '__main__':
                     order=models, hue='uncertainty', dodge=False,
                     palette=sns.color_palette("RdBu", n_colors=8,),
                     capsize=0.2,)
+        plt.ylim([ -100, 10100 ])
         plt.savefig('figures/benchmark_lead_{}.svg'.format(n_lead))
         plt.close()
+
+        gp_Kds = df_subset[df_subset.model == 'gp'].Kd
+        for model in models:
+            if model == 'gp':
+                continue
+            other_Kds = df_subset[df_subset.model == model].Kd
+            print('{} leads, t-test, GP vs {}:'.format(n_lead, model))
+            print('\tt = {:.4f}, P = {:.4g}'
+                  .format(*ss.ttest_ind(gp_Kds, other_Kds,
+                                        equal_var=False)))
+        print('')

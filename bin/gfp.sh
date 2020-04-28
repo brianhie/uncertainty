@@ -3,11 +3,15 @@ do
     echo -e "GFP Seed:\t"$seed >> gfp_dhybrid.log
     python bin/gfp.py dhybrid 1 $seed >> gfp_dhybrid.log
 
-    echo -e "GFP Seed:\t"$seed >> gfp_dmlper5g.log
-    python bin/gfp.py dmlper5g 1 $seed >> gfp_dmlper5g.log
+    export CUDA_VISIBLE_DEVICES=1
+    echo -e "GFP Seed:\t"$seed >> gfp_mlper5g.log
+    python bin/gfp.py mlper5g 1 $seed >> gfp_mlper5g.log &
 
-    echo -e "GFP Seed:\t"$seed >> gfp_dmlper1.log
-    python bin/gfp.py dmlper1 0 $seed >> gfp_dmlper1.log
+    export CUDA_VISIBLE_DEVICES=2
+    echo -e "GFP Seed:\t"$seed >> gfp_mlper1.log
+    python bin/gfp.py mlper1 0 $seed >> gfp_mlper1.log &
+
+    wait
 done
 
 for seed in {1..5}

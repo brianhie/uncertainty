@@ -18,6 +18,12 @@ def load_embeddings(fname):
     ])
     return X, meta
 
+def plot_stats(meta):
+    plt.figure()
+    sns.distplot(np.array(meta.n_mut).ravel(), kde=False)
+    plt.savefig('figures/gfp_nmut_hist.svg')
+    plt.close()
+
 def split_X(X, meta):
     X_train, X_test, y_train, y_test = [], [], [], []
     mutations_test = []
@@ -47,8 +53,9 @@ def train(regress_type, X_train, y_train, seed=1):
             n_neurons=1000,
             n_regressors=1,
             n_hidden_layers=15,
-            n_epochs=300,
+            n_epochs=50,
             seed=seed,
+            verbose=False,
         )
 
     elif regress_type == 'mlper5g':
@@ -63,7 +70,7 @@ def train(regress_type, X_train, y_train, seed=1):
         regressor = mlp_ensemble(
             n_neurons=1000,
             n_regressors=15,
-            n_epochs=300,
+            n_epochs=50,
             loss='gaussian_nll',
             seed=seed,
         )
@@ -73,7 +80,7 @@ def train(regress_type, X_train, y_train, seed=1):
         regressor = BayesianNN(
             n_hidden1=200,
             n_hidden2=200,
-            n_iter=1000,
+            n_iter=3000,
             n_posterior_samples=100,
             random_state=seed,
             verbose=True,
@@ -126,7 +133,7 @@ def train(regress_type, X_train, y_train, seed=1):
                 n_neurons=1000,
                 n_regressors=1,
                 n_hidden_layers=15,
-                n_epochs=300,
+                n_epochs=600,
                 seed=seed,
             ),
             GPRegressor(
@@ -172,6 +179,7 @@ if __name__ == '__main__':
 
     if len(sys.argv) >= 4:
         seed = int(sys.argv[3])
+        np.random.seed(seed)
     else:
         seed = 1
 
