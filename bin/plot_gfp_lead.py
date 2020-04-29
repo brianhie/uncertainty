@@ -49,7 +49,7 @@ def parse_log(model, fname):
 if __name__ == '__main__':
     models = [
         'gp',
-        #'dhybrid',
+        'dhybrid',
         'bayesnn',
         'mlper5g',
         'mlper1',
@@ -110,4 +110,4 @@ if __name__ == '__main__':
     frac_positive = sum(brightness > 3) / float(len(brightness))
     plt.plot(order, frac_positive * order, c='gray', linestyle='--')
     plt.legend(models + [ 'Random guessing' ])
-    plt.savefig('figures/gfp_acquisition.svg')#, dpi=300)
+    plt.savefig('figures/gfp_acquisition.svg')

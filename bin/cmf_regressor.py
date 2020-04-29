@@ -8,9 +8,11 @@ class CMFRegressor(object):
             n_chems=1,
             n_prots=1,
             seed=1,
+            verbose=False,
     ):
         self.n_components_ = n_components
         self.seed_ = seed
+        self.verbose_ = verbose
 
     def fit(self, chems, prots, chem2feature, prot2feature,
             Kds, train_idx):
@@ -28,7 +30,8 @@ class CMFRegressor(object):
             k=self.n_components_,
             reg_param=18e-5,
             reindex=False,
-            random_seed=self.seed_
+            random_seed=self.seed_,
+            verbose=self.verbose_,
         )
 
         self.model_.fit(

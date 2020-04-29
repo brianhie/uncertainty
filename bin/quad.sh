@@ -19,10 +19,8 @@ do
     wait
 done
 
-source activate edward
 for i in {0..4}
 do
     python bin/iterate_davis2011kinase.py bayesnn quad 100 --seed $i \
            >> iterate_davis2011kinase_bayesnn_quad.log 2>&1
 done
-conda deactivate

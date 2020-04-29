@@ -66,9 +66,6 @@ def train(regress_type='hybrid', seed=1, **kwargs):
 
     kwargs['regress_type'] = regress_type
 
-    n_features_chem = kwargs['n_features_chem']
-    n_features_prot = kwargs['n_features_prot']
-
     # Debug.
     #X_obs = X_obs[:10]
     #y_obs = y_obs[:10]
@@ -158,6 +155,10 @@ def train(regress_type='hybrid', seed=1, **kwargs):
         from gaussian_process import GPRegressor
         from sklearn.gaussian_process.kernels import ConstantKernel as C
         from kernels import FactorizedRBF
+
+        n_features_chem = kwargs['n_features_chem']
+        n_features_prot = kwargs['n_features_prot']
+
         regressor = GPRegressor(
             kernel=C(1., 'fixed') * FactorizedRBF(
                 [ 1.1, 1. ], [ n_features_chem, n_features_prot ], 'fixed'
