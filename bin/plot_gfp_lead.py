@@ -2,13 +2,15 @@ from utils import *
 
 import pandas as pd
 import seaborn as sns
+from sklearn.metrics import roc_auc_score
 
-def parse_log(model, fname):
+def parse_log(model, fname, brightness_offset=3.,
+              start_prefix='0\tS', end_prefix='39899\tS'):
     data = []
 
-    if model == 'gp' or model == 'dhybrid':
+    if model == 'gp' or 'hybrid' in model:
         uncertainty = 'GP-based uncertainty'
-    elif model == 'dmlper5g' or model == 'bayesnn':
+    elif 'mlper5g' in model or model == 'bayesnn':
         uncertainty = 'Other uncertainty'
     else:
         uncertainty = 'No uncertainty'
@@ -29,33 +31,24 @@ def parse_log(model, fname):
             if line.startswith('GFP Seed:\t'):
                 seed = int(line.rstrip().split()[-1])
 
-            if line.startswith('0\tS'):
+            if line.startswith(start_prefix):
                 in_data = True
 
             if in_data:
                 assert(seed is not None)
                 fields = line.rstrip().split('\t')
                 rank = int(fields[0]) + 1
-                brightness = float(fields[-1]) + 3.
+                brightness = float(fields[-1]) + brightness_offset
                 data.append([
                     model, uncertainty, rank, brightness, seed,
                 ])
 
-            if line.startswith('39899\tS'):
+            if line.startswith(end_prefix):
                 in_data = False
 
     return data
 
-if __name__ == '__main__':
-    models = [
-        'gp',
-        'dhybrid',
-        'bayesnn',
-        'mlper5g',
-        'mlper1',
-        'gp0',
-    ]
-
+def plot_gfp(models):
     data = []
     for model in models:
         fname = ('gfp_{}.log'.format(model))
@@ -111,3 +104,57 @@ if __name__ == '__main__':
     plt.plot(order, frac_positive * order, c='gray', linestyle='--')
     plt.legend(models + [ 'Random guessing' ])
     plt.savefig('figures/gfp_acquisition.svg')
+
+def plot_gfp_fpbase(models):
+    data = []
+    for model in models:
+        fname = ('gfp_fpbase_{}.log'.format(model))
+        data += parse_log(model, fname, brightness_offset=0.,
+                          start_prefix='0\t', end_prefix='174\t')
+
+    df = pd.DataFrame(data, columns=[
+        'model', 'uncertainty', 'order', 'brightness', 'seed',
+    ])
+
+    seeds = sorted(set(df.seed))
+
+    data = []
+    for model in models:
+        for seed in seeds:
+            df_subset = df[(df.model == model) &
+                           (df.seed == seed)]
+            if len(df_subset) == 0:
+                continue
+            uncertainty = set(df_subset.uncertainty).pop()
+            y_true = (np.array(df_subset.brightness).ravel() > 0.) * 1.
+            y_pred = -np.array(df_subset.order).ravel()
+            auroc = roc_auc_score(y_true, y_pred)
+            data.append([ model, uncertainty, auroc ])
+
+    df_plot = pd.DataFrame(data, columns=[
+        'model', 'uncertainty', 'value'
+    ])
+
+    plt.figure()
+    sns.barplot(x='model', y='value', data=df_plot, ci=None,
+                order=models, hue='uncertainty', dodge=False,
+                palette=sns.color_palette("RdBu", n_colors=8))
+    sns.swarmplot(x='model', y='value', data=df_plot, color='black',
+                  order=models)
+    plt.savefig('figures/gfp_fpbase_auroc.svg')
+    plt.close()
+
+
+if __name__ == '__main__':
+    models = [
+        'gp',
+        'hybrid',
+        'bayesnn',
+        'mlper5g',
+        'mlper1',
+        'gp0',
+    ]
+
+    #plot_gfp(models)
+
+    plot_gfp_fpbase(models)

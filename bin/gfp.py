@@ -172,17 +172,7 @@ def train(regress_type, X_train, y_train, seed=1):
 def acquisition_rank(y_pred, var_pred, beta=1.):
     return ss.rankdata(y_pred) + (beta * ss.rankdata(-var_pred))
 
-
-if __name__ == '__main__':
-    model = sys.argv[1]
-    beta = float(sys.argv[2])
-
-    if len(sys.argv) >= 4:
-        seed = int(sys.argv[3])
-        np.random.seed(seed)
-    else:
-        seed = 1
-
+def gfp_cv(model_beta, seed):
     X, meta = load_embeddings(
         'data/sarkisyan2016gfp/embeddings.txt'
     )
@@ -209,3 +199,70 @@ if __name__ == '__main__':
             rank, mutations_test[idx], y_test[idx]
         ]
         print('\t'.join([ str(field) for field in fields ]))
+
+def load_fpbase(fname):
+    X, meta = [], []
+    with open(fname) as f:
+        for line in f:
+            if line.startswith('>'):
+                name, ex, em, brightness = line[1:].rstrip().split('_')
+                try:
+                    ex = float(ex)
+                    em = float(em)
+                except:
+                    continue
+                if brightness.strip() == '':
+                    continue
+                if em < 500 or em > 520:
+                    #continue
+                    brightness = 0.
+                else:
+                    brightness = float(brightness)
+                X.append([ float(x) for x in f.readline().split() ])
+                meta.append([ name, ex, em, brightness ])
+    X = np.array(X)
+    meta = pd.DataFrame(meta, columns=[
+        'name', 'ex', 'em', 'brightness'
+    ])
+    return X, meta
+
+def gfp_fpbase(model, beta, seed):
+    X, meta = load_embeddings(
+        'data/sarkisyan2016gfp/embeddings.txt'
+    )
+
+    X_train, y_train, X_test, y_test, mutations_test = split_X(
+        X, meta
+    )
+
+    X_val, meta_val = load_fpbase(
+        'data/sarkisyan2016gfp/fpbase_embeddings.txt'
+    )
+
+    regressor = train(model, X_train, y_train, seed=seed)
+    y_unk_pred = regressor.predict(X_val)
+    var_unk_pred = regressor.uncertainties_
+
+    acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta)
+
+    acq_argsort = np.argsort(-acquisition)
+    for rank, idx in enumerate(acq_argsort):
+        fields = [
+            rank, meta_val.name[idx], meta_val.brightness[idx]
+        ]
+        print('\t'.join([ str(field) for field in fields ]))
+
+
+if __name__ == '__main__':
+    model = sys.argv[1]
+    beta = float(sys.argv[2])
+
+    if len(sys.argv) >= 4:
+        seed = int(sys.argv[3])
+        np.random.seed(seed)
+    else:
+        seed = 1
+
+    #gfp_cv(model, beta, seed)
+
+    gfp_fpbase(model, beta, seed)

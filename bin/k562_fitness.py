@@ -1,6 +1,6 @@
 from utils import *
 
-from itertools import combinations as comb
+from itertools import combinations_with_replacement as comb
 
 from train_davis2011kinase import mlp_ensemble
 from iterate_davis2011kinase import acquisition_rank
@@ -39,7 +39,7 @@ def load_data(**kwargs):
 
     return kwargs
 
-def featurize(featurization='diff', **kwargs):
+def featurize(featurization='cat', **kwargs):
     genes = kwargs['genes']
     gene2vec = kwargs['gene2vec']
     fitness = kwargs['fitness']
@@ -76,11 +76,19 @@ def featurize(featurization='diff', **kwargs):
             idx_obs.append((idx1, idx2))
             X_obs.append(feature)
             y_obs.append(fit)
+            if idx1 != idx2:
+                idx_obs.append((idx2, idx1))
+                feature = np.concatenate([ gene2vec[gene2],
+                                           gene2vec[gene1] ])
+                X_obs.append(feature)
+                y_obs.append(fit)
+
         elif idx1 in train_gene_idx or idx2 in train_gene_idx:
             idx_unk.append((idx1, idx2))
             idx_side.append((idx1, idx2))
             X_unk.append(feature)
             y_unk.append(fit)
+
         else:
             idx_unk.append((idx1, idx2))
             idx_novel.append((idx1, idx2))
