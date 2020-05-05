@@ -14,14 +14,24 @@ def load_embeddings(fname):
                 meta.append([ mutations, n_mut, brightness ])
     X = np.array(X)
     meta = pd.DataFrame(meta, columns=[
-        'mutations', 'n_mut', 'brightness'
+        'mutations', 'n_mut', 'brightness',
     ])
     return X, meta
 
 def plot_stats(meta):
+    #plt.figure()
+    #sns.distplot(np.array(meta.n_mut).ravel(), kde=False)
+    #plt.savefig('figures/gfp_nmut_hist.svg')
+    #plt.close()
+
+    edit_dist = np.array(meta.edit).ravel()
+
+    print(np.median(edit_dist))
+
     plt.figure()
-    sns.distplot(np.array(meta.n_mut).ravel(), kde=False)
-    plt.savefig('figures/gfp_nmut_hist.svg')
+    sns.distplot(edit_dist, kde=False,
+                 bins=10)
+    plt.savefig('figures/gfp_edit_hist.svg')
     plt.close()
 
 def split_X(X, meta):
@@ -165,6 +175,10 @@ def train(regress_type, X_train, y_train, seed=1):
             ),
         )
 
+    elif regress_type == 'linear':
+        from linear_regression import LinearRegressor
+        regressor = LinearRegressor()
+
     regressor.fit(X_train, y_train)
 
     return regressor
@@ -172,7 +186,7 @@ def train(regress_type, X_train, y_train, seed=1):
 def acquisition_rank(y_pred, var_pred, beta=1.):
     return ss.rankdata(y_pred) + (beta * ss.rankdata(-var_pred))
 
-def gfp_cv(model_beta, seed):
+def gfp_cv(model, beta, seed):
     X, meta = load_embeddings(
         'data/sarkisyan2016gfp/embeddings.txt'
     )
@@ -205,7 +219,7 @@ def load_fpbase(fname):
     with open(fname) as f:
         for line in f:
             if line.startswith('>'):
-                name, ex, em, brightness = line[1:].rstrip().split('_')
+                name, ex, em, brightness, avgfp_edit = line[1:].rstrip().split('_')
                 try:
                     ex = float(ex)
                     em = float(em)
@@ -218,11 +232,12 @@ def load_fpbase(fname):
                     brightness = 0.
                 else:
                     brightness = float(brightness)
+                avgfp_edit = int(avgfp_edit)
                 X.append([ float(x) for x in f.readline().split() ])
-                meta.append([ name, ex, em, brightness ])
+                meta.append([ name, ex, em, brightness, avgfp_edit ])
     X = np.array(X)
     meta = pd.DataFrame(meta, columns=[
-        'name', 'ex', 'em', 'brightness'
+        'name', 'ex', 'em', 'brightness', 'edit',
     ])
     return X, meta
 
@@ -239,9 +254,24 @@ def gfp_fpbase(model, beta, seed):
         'data/sarkisyan2016gfp/fpbase_embeddings.txt'
     )
 
+    #plot_stats(meta_val)
+
     regressor = train(model, X_train, y_train, seed=seed)
     y_unk_pred = regressor.predict(X_val)
     var_unk_pred = regressor.uncertainties_
+
+    plt.figure()
+    plt.scatter(meta_val.edit, var_unk_pred, alpha=0.3)
+    plt.xlabel('Edit distance')
+    plt.ylabel('Uncertainty')
+    plt.savefig('figures/gfp_edit_uncertainty.png', dpi=300)
+    print('Spearman r = {}'.format(
+        ss.spearmanr(meta_val.edit, var_unk_pred)
+    ))
+    print('Pearson rho = {}'.format(
+        ss.pearsonr(meta_val.edit, var_unk_pred)
+    ))
+    exit()
 
     acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta)
 

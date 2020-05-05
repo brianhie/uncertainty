@@ -15,7 +15,7 @@ def parse_log(model, fname, brightness_offset=3.,
     else:
         uncertainty = 'No uncertainty'
 
-    if model == 'gp' or model == 'gp0':
+    if model in { 'gp', 'gp0', 'linear' }:
         seed = 1
     else:
         seed = None
@@ -141,9 +141,9 @@ def plot_gfp_fpbase(models):
                 palette=sns.color_palette("RdBu", n_colors=8))
     sns.swarmplot(x='model', y='value', data=df_plot, color='black',
                   order=models)
+    plt.ylim([ 0., 1. ])
     plt.savefig('figures/gfp_fpbase_auroc.svg')
     plt.close()
-
 
 if __name__ == '__main__':
     models = [
@@ -152,7 +152,7 @@ if __name__ == '__main__':
         'bayesnn',
         'mlper5g',
         'mlper1',
-        'gp0',
+        'linear',
     ]
 
     #plot_gfp(models)

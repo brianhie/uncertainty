@@ -60,6 +60,14 @@ def featurize_prots(fname, prots):
 
     return prot2feature
 
+def expected_acquisition(y_unk, n_acq=5, n_samples=100000):
+    dist = [
+        np.mean(np.random.choice(y_unk, n_acq, replace=False))
+        for i in range(n_samples)
+    ]
+    print('Expected value {} of {} acquired'
+          .format(np.mean(dist), n_acq))
+
 def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
     prots = np.array(prots)
     prot_idx_train, prot_idx_test = [], []
@@ -127,6 +135,8 @@ def split_data(Kds, chems, genes, prots, chem2feature, prot2feature):
     #X_test = X_test[:10]
     #y_test = y_test[:10]
     #idx_test = idx_train[:10]
+
+    #expected_acquisition(y_test)
 
     process_data = {
         'Kds': Kds,

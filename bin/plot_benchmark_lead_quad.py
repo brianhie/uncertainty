@@ -69,6 +69,7 @@ if __name__ == '__main__':
         'mlper5g',
         'mlper1',
         'cmf',
+        'gp0',
     ]
 
     data = []
