@@ -5,7 +5,6 @@ from rdkit.Chem.Descriptors import ExactMolWt
 from rdkit.Chem.GraphDescriptors import BalabanJ, BertzCT
 from rdkit.DataStructs import FingerprintSimilarity
 import numpy as np
-import sys
 
 def print_stat(stat_name, data):
     print('{}:'.format(stat_name))
@@ -21,7 +20,7 @@ if __name__ == '__main__':
     chems = []
     mol_weights, sssrs = [], []
     balabanjs, bertzcts = [], []
-    with open(sys.argv[1]) as f:
+    with open('data/davis2011kinase/cayman_smiles.txt') as f:
         f.readline()
         for line in f:
             smile = line.split()[0]
