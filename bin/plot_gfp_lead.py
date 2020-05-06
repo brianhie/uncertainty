@@ -129,10 +129,10 @@ def plot_gfp_fpbase(models):
             y_true = (np.array(df_subset.brightness).ravel() > 0.) * 1.
             y_pred = -np.array(df_subset.order).ravel()
             auroc = roc_auc_score(y_true, y_pred)
-            data.append([ model, uncertainty, auroc, bright_corr ])
+            data.append([ model, uncertainty, auroc, ])
 
     df_plot = pd.DataFrame(data, columns=[
-        'model', 'uncertainty', 'value', 'bright_corr'
+        'model', 'uncertainty', 'value',
     ])
 
     plt.figure()

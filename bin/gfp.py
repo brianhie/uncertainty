@@ -92,7 +92,7 @@ def train(regress_type, X_train, y_train, seed=1):
         regressor = BayesianNN(
             n_hidden1=200,
             n_hidden2=200,
-            n_iter=3000,
+            n_iter=1000,
             n_posterior_samples=100,
             random_state=seed,
             verbose=True,
@@ -289,6 +289,43 @@ def gfp_fpbase(model, beta, seed):
         ]
         print('\t'.join([ str(field) for field in fields ]))
 
+def egfp(model, beta, seed):
+    X, meta = load_embeddings(
+        'data/sarkisyan2016gfp/embeddings.txt'
+    )
+
+    X_train, y_train, _, _, _ = split_X(
+        X, meta
+    )
+
+    X_mut3 = X[meta.n_mut == 3]
+
+    X_fpbase, meta_fpbase = load_fpbase(
+        'data/sarkisyan2016gfp/fpbase_egfp_embeddings.txt'
+    )
+    egfp_idx = list(meta_fpbase.name).index('EGFP')
+    X_egfp = X_fpbase[egfp_idx].reshape(1, -1)
+
+    X_val = np.concatenate([ X_egfp, X_mut3 ])
+
+    regressor = train(model, X_train, y_train, seed=seed)
+    y_unk_pred = regressor.predict(X_val)
+    var_unk_pred = regressor.uncertainties_
+
+    acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta)
+
+    acq_ranks = ss.rankdata(acquisition)
+
+    plt.figure()
+    plt.scatter(acq_ranks, np.zeros(len(acq_ranks)),
+                c='#dddddd', marker='s', alpha=0.1)
+    plt.scatter([ acq_ranks[0] ], [ 0 ],
+                c='red', marker='s', alpha=1.)
+    plt.title('{}, EGFP rank {}'.format(model, acq_ranks[0]))
+    plt.xlim([ -10, 100 ])
+    plt.savefig('figures/egfp_loc_{}.png'.format(model), dpi=300)
+    plt.close()
+
 if __name__ == '__main__':
     model = sys.argv[1]
     beta = float(sys.argv[2])
@@ -302,3 +339,5 @@ if __name__ == '__main__':
     #gfp_cv(model, beta, seed)
 
     gfp_fpbase(model, beta, seed)
+
+    #egfp(model, beta, seed)
