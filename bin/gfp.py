@@ -218,6 +218,14 @@ def gfp_cv(model, beta, seed):
         ]
         print('\t'.join([ str(field) for field in fields ]))
 
+    if model == 'gp':
+        np.save('target/prediction_cache/gfp_cv_ypred_{}.npy'
+                .format(model), y_unk_pred)
+        np.save('target/prediction_cache/gfp_cv_varpred_{}.npy'
+                .format(model), var_unk_pred)
+        np.save('target/prediction_cache/gfp_cv_acq_{}.npy'
+                .format(model), acquisition)
+
 def load_fpbase(fname):
     X, meta = [], []
     with open(fname) as f:
@@ -326,6 +334,102 @@ def egfp(model, beta, seed):
     plt.savefig('figures/egfp_loc_{}.png'.format(model), dpi=300)
     plt.close()
 
+def gfp_structure(model, beta, seed):
+    from Bio import Seq, SeqIO
+    gfp_fasta = 'data/sarkisyan2016gfp/avGFP_reference_sequence.fa'
+    for record in SeqIO.parse(gfp_fasta, 'fasta'):
+        ref_nt_seq = record.seq
+        break
+    ref_seq = Seq.translate(ref_nt_seq)
+
+    with open('data/sarkisyan2016gfp/2wur.pdb') as f:
+        surface_idxs = set([ int(line[23:26]) for line in f
+                             if line.startswith('ANISOU') ])
+
+    X, meta = load_embeddings(
+        'data/sarkisyan2016gfp/embeddings.txt'
+    )
+
+    X_train, y_train, X_test, y_test, mutations_test = split_X(
+        X, meta
+    )
+
+    # Use brightness cutoff of 3 used in original study.
+    y_train -= 3.
+    y_test -= 3.
+    y_train[y_train < 0.] = 0.
+    y_test[y_test < 0.] = 0.
+
+    y_unk_pred = np.load(
+        'target/prediction_cache/gfp_cv_ypred_{}.npy'
+        .format(model)
+    )
+    var_unk_pred = np.load(
+        'target/prediction_cache/gfp_cv_varpred_{}.npy'
+        .format(model)
+    )
+    acquisition = np.load(
+        'target/prediction_cache/gfp_cv_acq_{}.npy'
+        .format(model)
+    )
+
+    n_surface, n_buried = 0, 0
+    ns_surface, ns_buried = [], []
+    acq_argsort = np.argsort(-acquisition)
+    pos2counts = {}
+    for i, acq_idx in enumerate(acq_argsort):
+        mutations = mutations_test[acq_idx].split(':')
+        for mutation in mutations:
+            start_aa = mutation[1]
+            end_aa = mutation[-1]
+            pos = int(mutation[2:-1])
+            assert(ref_seq[pos] == start_aa)
+            if pos in surface_idxs:
+                n_surface += 1
+            else:
+                n_buried += 1
+            if i < 100:
+                if pos not in pos2counts:
+                    pos2counts[pos] = 0
+                pos2counts[pos] += 1
+                if pos == 60:
+                    print(mutations_test[acq_idx])
+                    print(y_test[acq_idx])
+        if i == 49:
+            print('{}, Surface: {}, buried: {}'
+                  .format(i + 1, n_surface, n_buried))
+        elif i == 4999:
+            print('{}, Surface: {}, buried: {}'
+                  .format(i + 1, n_surface, n_buried))
+        ns_surface.append(n_surface)
+        ns_buried.append(n_buried)
+
+    print('Total, Surface: {}, buried: {}'
+          .format(len(surface_idxs),
+                  len(ref_seq) - len(surface_idxs)))
+
+    plt.figure()
+    plt.plot(np.array(range(len(acquisition))), ns_surface)
+    plt.plot(np.array(range(len(acquisition))), ns_buried)
+    plt.legend([ 'N surface', 'N buried' ])
+    plt.savefig('figures/gfp_structure.png', dpi=300)
+    plt.close()
+
+    cmap = matplotlib.cm.get_cmap('viridis')
+    max_count = float(max([ pos2counts[pos] for pos in pos2counts ]))
+    with open('data/sarkisyan2016gfp/gfp_acquistion.pml', 'w') as of:
+        for pos in range(len(ref_seq)):
+            if pos in pos2counts:
+                val = min(pos2counts[pos] / max_count, 0.5) / 0.5
+            else:
+                val = 0
+            of.write('select toColor, resi {} and chain A\n'
+                     .format(pos + 2))
+            rgb = cmap(val)
+            of.write('color {}, toColor\n'
+                     .format(matplotlib.colors.rgb2hex(rgb))
+                     .replace('#', '0x'))
+
 if __name__ == '__main__':
     model = sys.argv[1]
     beta = float(sys.argv[2])
@@ -338,6 +442,8 @@ if __name__ == '__main__':
 
     #gfp_cv(model, beta, seed)
 
-    gfp_fpbase(model, beta, seed)
+    #gfp_fpbase(model, beta, seed)
 
     #egfp(model, beta, seed)
+
+    gfp_structure(model, beta, seed)
