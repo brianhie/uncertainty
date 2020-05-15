@@ -17,12 +17,22 @@ def print_stat(stat_name, data):
 
 
 if __name__ == '__main__':
+    with open('data/davis2011kinase/chem_smiles.csv') as f:
+        f.readline()
+        exclude = set([
+            line.rstrip().rstrip(',').split(',')[-2]
+            for line in f
+        ])
+
     chems = []
     mol_weights, sssrs = [], []
     balabanjs, bertzcts = [], []
     with open('data/davis2011kinase/cayman_smiles.txt') as f:
         f.readline()
         for line in f:
+            zinc = line.split()[-2]
+            if zinc in exclude:
+                continue
             smile = line.split()[0]
             chem = Chem.MolFromSmiles(smile)
             chems.append(chem)
@@ -43,7 +53,7 @@ if __name__ == '__main__':
 
     print_stat('Tanimoto (RDK Fingerprint)', tanimotos)
 
-    fps = [ GetMorganFingerprintAsBitVect(chem, 4)
+    fps = [ GetMorganFingerprintAsBitVect(chem, 3)
             for chem in chems ]
     tanimotos = []
     for i, (fp1, fp2) in enumerate(combinations(fps, 2)):

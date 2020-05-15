@@ -134,6 +134,7 @@ def latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs):
     idx_obs = kwargs['idx_obs']
     idx_unk = kwargs['idx_unk']
     regress_type = kwargs['regress_type']
+    prot_target = kwargs['prot_target']
 
     chem_idx_obs = sorted(set([ i for i, _ in idx_obs ]))
     chem_idx_unk = sorted(set([ i for i, _ in idx_unk ]))
@@ -171,6 +172,11 @@ def latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs):
     )
     X_tsne = tsne.fit_transform(X)
 
+    if prot_target is None:
+        suffix = ''
+    else:
+        suffix = '_' + prot_target
+
     for name, coords in zip(
             [ 'pca', 'umap', 'tsne' ],
             [ X_pca, X_umap, X_tsne ],
@@ -180,22 +186,22 @@ def latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs):
                         color='blue', alpha=0.1,)
         plt.scatter(x=coords[labels == 0, 0], y=coords[labels == 0, 1],
                     color='orange', alpha=1.0, marker='x', linewidths=10,)
-        plt.savefig('figures/latent_scatter_{}_{}.png'
-                    .format(name, regress_type), dpi=300)
+        plt.savefig('figures/latent_scatter_{}_ypred_{}{}.png'
+                    .format(name, regress_type, suffix), dpi=300)
         plt.close()
 
         plt.figure()
         plt.scatter(x=coords[labels == 1, 0], y=coords[labels == 1, 1],
                     c=ss.rankdata(var_unk_pred), alpha=0.1, cmap='coolwarm')
-        plt.savefig('figures/latent_scatter_{}_var_{}.png'
-                    .format(name, regress_type), dpi=300)
+        plt.savefig('figures/latent_scatter_{}_var_{}{}.png'
+                    .format(name, regress_type, suffix), dpi=300)
         plt.close()
 
         plt.figure()
         plt.scatter(x=coords[labels == 1, 0], y=coords[labels == 1, 1],
                     c=-acquisition, alpha=0.1, cmap='hot')
-        plt.savefig('figures/latent_scatter_{}_acq_{}.png'
-                    .format(name, regress_type), dpi=300)
+        plt.savefig('figures/latent_scatter_{}_acq_{}{}.png'
+                    .format(name, regress_type, suffix), dpi=300)
         plt.close()
 
 def predict(**kwargs):

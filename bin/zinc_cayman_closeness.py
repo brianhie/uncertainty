@@ -17,7 +17,7 @@ if __name__ == '__main__':
             name = fields[-2]
             chem = Chem.MolFromSmiles(smile)
             #chem2fp[name] = Chem.RDKFingerprint(chem)
-            chem2fp[name] = GetMorganFingerprintAsBitVect(chem, 4)
+            chem2fp[name] = GetMorganFingerprintAsBitVect(chem, 3)
 
     train2fp = {}
     train2common = {}
@@ -29,11 +29,11 @@ if __name__ == '__main__':
             name = fields[-2]
             chem = Chem.MolFromSmiles(smile)
             #train2fp[name] = Chem.RDKFingerprint(chem)
-            train2fp[name] = GetMorganFingerprintAsBitVect(chem, 4)
+            train2fp[name] = GetMorganFingerprintAsBitVect(chem, 3)
             train2common[name] = fields[0]
 
     seen_predict = set()
-    with open('data/prediction_results.txt') as f:
+    with open(sys.argv[1]) as f:
         for line in f:
             fields = line.rstrip().split('\t')
             name = fields[3]
