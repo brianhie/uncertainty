@@ -11,6 +11,14 @@ tar xvf data.tar.gz
 ```
 within the same directory as this repository.
 
+### Dependencies
+
+The major Python package requirements and their tested versions are in [requirements.txt](requirements.txt).
+We used the `edward` package (version 1.3.5) alongside `tensorflow-cpu` (version 1.5.1) in a separate conda environment.
+We also used the RDKit within its own conda environment; download instructions can be found [here](https://www.rdkit.org/docs/Install.html).
+
+Our experiments were run with Python version 3.7.4 on Ubuntu 18.04.
+
 ### Compound-kinase affinity prediction experiments
 
 #### Cross-validation experiments
