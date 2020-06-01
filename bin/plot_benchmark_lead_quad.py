@@ -69,12 +69,12 @@ if __name__ == '__main__':
         'mlper5g',
         'mlper1',
         'cmf',
-        'gp0',
     ]
 
     data = []
     for model in models:
         fname = ('iterate_davis2011kinase_{}_quad.log'.format(model))
+        print(fname)
         data += parse_log(model, fname)
 
     df = pd.DataFrame(data, columns=[

@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     print_stat('Tanimoto (RDK Fingerprint)', tanimotos)
 
-    fps = [ GetMorganFingerprintAsBitVect(chem, 3)
+    fps = [ GetMorganFingerprintAsBitVect(chem, 2)
             for chem in chems ]
     tanimotos = []
     for i, (fp1, fp2) in enumerate(combinations(fps, 2)):

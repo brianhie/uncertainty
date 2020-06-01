@@ -2,6 +2,17 @@ from utils import *
 
 from train_davis2011kinase import mlp_ensemble
 
+def plot_stats(meta):
+    plt.figure()
+    sns.distplot(np.array(meta.n_mut).ravel(), kde=False)
+    plt.savefig('figures/gfp_nmut_hist.svg')
+    plt.close()
+
+    plt.figure()
+    sns.violinplot(meta.brightness, kde=False)
+    plt.savefig('figures/gfp_fluorescence_violin.svg')
+    plt.close()
+
 def load_embeddings(fname):
     X, meta = [], []
     with open(fname) as f:
@@ -16,13 +27,8 @@ def load_embeddings(fname):
     meta = pd.DataFrame(meta, columns=[
         'mutations', 'n_mut', 'brightness',
     ])
+    plot_stats(meta)
     return X, meta
-
-def plot_stats(meta):
-    plt.figure()
-    sns.distplot(np.array(meta.n_mut).ravel(), kde=False)
-    plt.savefig('figures/gfp_nmut_hist.svg')
-    plt.close()
 
 def plot_stats_fpbase(meta):
     edit_dist = np.array(meta.edit).ravel()
@@ -92,7 +98,7 @@ def train(regress_type, X_train, y_train, seed=1):
         regressor = BayesianNN(
             n_hidden1=200,
             n_hidden2=200,
-            n_iter=1000,
+            n_iter=100,
             n_posterior_samples=100,
             random_state=seed,
             verbose=True,
@@ -218,13 +224,13 @@ def gfp_cv(model, beta, seed):
         ]
         print('\t'.join([ str(field) for field in fields ]))
 
-    if model == 'gp':
-        np.save('target/prediction_cache/gfp_cv_ypred_{}.npy'
-                .format(model), y_unk_pred)
-        np.save('target/prediction_cache/gfp_cv_varpred_{}.npy'
-                .format(model), var_unk_pred)
-        np.save('target/prediction_cache/gfp_cv_acq_{}.npy'
-                .format(model), acquisition)
+    #if model == 'gp':
+    np.save('target/prediction_cache/gfp_cv_ypred_{}.npy'
+            .format(model), y_unk_pred)
+    np.save('target/prediction_cache/gfp_cv_varpred_{}.npy'
+            .format(model), var_unk_pred)
+    np.save('target/prediction_cache/gfp_cv_acq_{}.npy'
+            .format(model), acquisition)
 
 def load_fpbase(fname):
     X, meta = [], []
@@ -356,9 +362,9 @@ def gfp_structure(model, beta, seed):
 
     # Use brightness cutoff of 3 used in original study.
     y_train -= 3.
-    y_test -= 3.
+    y_test_cutoff = y_test - 3.
     y_train[y_train < 0.] = 0.
-    y_test[y_test < 0.] = 0.
+    y_test_cutoff[y_test_cutoff < 0.] = 0.
 
     y_unk_pred = np.load(
         'target/prediction_cache/gfp_cv_ypred_{}.npy'
@@ -368,10 +374,7 @@ def gfp_structure(model, beta, seed):
         'target/prediction_cache/gfp_cv_varpred_{}.npy'
         .format(model)
     )
-    acquisition = np.load(
-        'target/prediction_cache/gfp_cv_acq_{}.npy'
-        .format(model)
-    )
+    acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta)
 
     n_surface, n_buried = 0, 0
     ns_surface, ns_buried = [], []
@@ -392,9 +395,6 @@ def gfp_structure(model, beta, seed):
                 if pos not in pos2counts:
                     pos2counts[pos] = 0
                 pos2counts[pos] += 1
-                if pos == 60:
-                    print(mutations_test[acq_idx])
-                    print(y_test[acq_idx])
         if i == 49:
             print('{}, Surface: {}, buried: {}'
                   .format(i + 1, n_surface, n_buried))
@@ -414,6 +414,25 @@ def gfp_structure(model, beta, seed):
     plt.legend([ 'N surface', 'N buried' ])
     plt.savefig('figures/gfp_structure.png', dpi=300)
     plt.close()
+
+    plt.figure()
+    plt.scatter(list(range(len(y_test))), y_test[acq_argsort],
+                alpha=0.01, c='#008080')
+    plt.title('Spearman r = {:.4g}, P = {:.4g}'.format(
+        *ss.spearmanr(
+            list(range(len(y_test))), y_test[acq_argsort]
+        )
+    ))
+    plt.savefig('figures/gfp_corr_{}.png'.format(model), dpi=300)
+    plt.close()
+
+    if model in { 'gp', 'hybrid', 'linear' }:
+        plt.figure()
+        plt.scatter(y_unk_pred, np.log1p(var_unk_pred), c=y_test_cutoff,
+                    cmap='viridis', alpha=0.3)
+        plt.title('GFP {}'.format(model))
+        plt.savefig('figures/gfp_ypred_var_{}.png'.format(model))
+        plt.close()
 
     cmap = matplotlib.cm.get_cmap('viridis')
     max_count = float(max([ pos2counts[pos] for pos in pos2counts ]))

@@ -2,7 +2,7 @@ from utils import plt
 
 import numpy as np
 import pandas as pd
-from scipy.stats import spearmanr
+import scipy.stats as ss
 import seaborn as sns
 
 def plot_batch(df, batch):
@@ -10,6 +10,15 @@ def plot_batch(df, batch):
     # Plot 50uM.
 
     df_50uM = df[df.conc == -3]
+
+    if batch.startswith('Ala'):
+        df_dmso = df_50uM[df_50uM.comp == 'DMSO']
+        for comp in [ 'K252a', 'SU11652', 'TG101209', 'RIF', ]:
+            df_comp = df_50uM[df_50uM.comp == comp]
+            t, p_2side = ss.ttest_ind(df_comp.fluo, df_dmso.fluo)
+            p_1side = p_2side / 2. if t < 0 else 1. - (p_2side / 2.)
+            print('{}, one-sided t-test P = {}, n = {}'
+                  .format(comp, p_1side, len(df_comp)))
 
     plt.figure()
     sns.barplot(x='comp', y='fluo', data=df_50uM, ci=None, dodge=False,
@@ -32,7 +41,6 @@ def plot_batch(df, batch):
     for cidx, comp in enumerate([
             'K252a', 'SU11652', 'TG101209', 'RIF', 'DMSO'
     ]):
-
         df_subset = df[df.comp == comp]
 
         plt.subplot(1, 5, cidx + 1)
@@ -41,19 +49,12 @@ def plot_batch(df, batch):
                         color='black',)
         plt.title(comp)
         if batch.startswith('Ala'):
-            plt.ylim([ 0., 1.8 ])
+            plt.ylim([ 0., 1.3 ])
         else:
             plt.ylim([ 10, 1000000 ])
             plt.yscale('log')
         plt.xticks(list(range(-3, -6, -1)),
                    [ '50', '25', '10', ])#'1', '0.1' ])
-
-        r, p = spearmanr(df_subset.conc, df_subset.fluo)
-        p /= 2
-        if r > 0:
-            p = 1. - p
-        print('Spearman r for {}: {:.4f}, P = {}, n = {}'
-              .format(comp, r, p, len(df_subset.conc)))
 
     plt.savefig('figures/tb_culture_{}.svg'.format(batch))
     plt.close()
@@ -82,4 +83,6 @@ if __name__ == '__main__':
 
     batches = sorted(set(df.batch))
     for batch in batches:
+        print(batch)
         plot_batch(df[df.batch == batch], batch)
+        print('')

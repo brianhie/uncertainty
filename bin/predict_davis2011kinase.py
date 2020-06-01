@@ -146,6 +146,15 @@ def latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs):
         chem2feature[chems[i]] for i in chem_idx_unk
     ])
 
+    from sklearn.neighbors import NearestNeighbors
+    nbrs = NearestNeighbors(n_neighbors=1).fit(feature_obs)
+    dist = np.ravel(nbrs.kneighbors(feature_unk)[0])
+    print('Distance Spearman r = {}, P = {}'
+          .format(*ss.spearmanr(dist, var_unk_pred)))
+    print('Distance Pearson rho = {}, P = {}'
+          .format(*ss.pearsonr(dist, var_unk_pred)))
+    exit()
+
     X = np.vstack([ feature_obs, feature_unk ])
     labels = np.concatenate([
         np.zeros(len(chem_idx_obs)), np.ones(len(chem_idx_unk))
@@ -244,7 +253,7 @@ def predict(**kwargs):
                         regress_type)
 
     # Plot visualization of chemical latent space.
-    #latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs)
+    latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs)
 
     kwargs['y_unk_pred'] = y_unk_pred
     kwargs['var_unk_pred'] = var_unk_pred

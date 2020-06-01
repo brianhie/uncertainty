@@ -61,12 +61,14 @@ if __name__ == '__main__':
         'mlper5g',
         'mlper1',
         'cmf',
-        'gp0',
     ]
 
     data = []
     for model in models:
-        fname = ('iterate_davis2011kinase_{}_exploit.log'.format(model))
+        if model == 'mlper5g':
+            fname = 'iterate_davis2011kinase_mlper5g_exploit100_beta1.log'
+        else:
+            fname = ('iterate_davis2011kinase_{}_exploit.log'.format(model))
         data += parse_log(model, fname)
 
     df = pd.DataFrame(data, columns=[
@@ -74,7 +76,7 @@ if __name__ == '__main__':
         'chem_name', 'prot_name', 'chem_idx', 'prot_idx',
     ])
 
-    n_leads = [ 5, 10, 20, 50, 100 ]
+    n_leads = [ 5, 50 ]
 
     for n_lead in n_leads:
         df_subset = df[df.lead_num < n_lead]
@@ -88,9 +90,9 @@ if __name__ == '__main__':
         plt.savefig('figures/benchmark_lead_{}.svg'.format(n_lead))
         plt.close()
 
-        gp_Kds = df_subset[df_subset.model == 'gp'].Kd
+        gp_Kds = df_subset[df_subset.model == 'hybrid'].Kd
         for model in models:
-            if model == 'gp':
+            if model == 'hybrid':
                 continue
             other_Kds = df_subset[df_subset.model == model].Kd
             print('{} leads, t-test, GP vs {}:'.format(n_lead, model))

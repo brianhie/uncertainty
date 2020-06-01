@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.stats import pearsonr, spearmanr
+import scipy.stats as ss
 import seaborn as sns
 
 def parse_log(fname, conc):
@@ -31,6 +31,14 @@ def plot_batch(df, batch):
 
     df_50uM = df[df.conc == 50.]
 
+    df_dmso = df_50uM[df_50uM.comp == 'DMSO']
+    for comp in [ 'K252a', 'SU11652', 'TG101209', 'RIF', ]:
+        df_comp = df_50uM[df_50uM.comp == comp]
+        t, p_2side = ss.ttest_ind(df_comp.fluo, df_dmso.fluo)
+        p_1side = p_2side / 2. if t < 0 else 1. - (p_2side / 2.)
+        print('{}, one-sided t-test P = {}, n = {}'
+              .format(comp, p_1side, len(df_comp)))
+
     plt.figure()
     sns.barplot(x='comp', y='fluo', data=df_50uM, ci=None, dodge=False,
                 hue='control',
@@ -38,7 +46,7 @@ def plot_batch(df, batch):
                 order=[ 'K252a', 'SU11652', 'RIF', 'DMSO' ])
     sns.swarmplot(x='comp', y='fluo', data=df_50uM, color='black',
                   order=[ 'K252a', 'SU11652', 'RIF', 'DMSO' ])
-    plt.ylim([ 10, 300000 ])
+    plt.ylim([ 10, 35000 ])
     plt.yscale('log')
     plt.savefig('figures/tb_macrophage_50uM_{}.svg'.format(batch))
     plt.close()
@@ -64,13 +72,6 @@ def plot_batch(df, batch):
         plt.yscale('log')
         plt.xticks(list(range(-len(conc), 0, -1)), conc)
         plt.title(comp)
-
-        r, p = spearmanr(df_subset.conc, df_subset.fluo)
-        p /= 2
-        if r > 0:
-            p = 1. - p
-        print('Spearman r for {}: {:.4f}, P = {}, n = {}'
-              .format(comp, r, p, len(df_subset.conc)))
 
     plt.savefig('figures/tb_macrophage_{}.svg'.format(batch))
     plt.close()

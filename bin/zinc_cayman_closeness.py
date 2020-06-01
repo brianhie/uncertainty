@@ -17,7 +17,7 @@ if __name__ == '__main__':
             name = fields[-2]
             chem = Chem.MolFromSmiles(smile)
             #chem2fp[name] = Chem.RDKFingerprint(chem)
-            chem2fp[name] = GetMorganFingerprintAsBitVect(chem, 3)
+            chem2fp[name] = GetMorganFingerprintAsBitVect(chem, 2)
 
     train2fp = {}
     train2common = {}
@@ -29,7 +29,7 @@ if __name__ == '__main__':
             name = fields[-2]
             chem = Chem.MolFromSmiles(smile)
             #train2fp[name] = Chem.RDKFingerprint(chem)
-            train2fp[name] = GetMorganFingerprintAsBitVect(chem, 3)
+            train2fp[name] = GetMorganFingerprintAsBitVect(chem, 2)
             train2common[name] = fields[0]
 
     seen_predict = set()
@@ -46,10 +46,12 @@ if __name__ == '__main__':
             max_tan, max_chem = 0, None
             for chem in train2fp:
                 tan = FingerprintSimilarity(fp, train2fp[chem])
+                if common == 'IKK-16':
+                    print(tan)
                 if tan > max_tan:
                     max_tan = tan
                     max_chem = chem
             ofields = [
                 name, common, max_chem, train2common[max_chem], max_tan
             ]
-            print('\t'.join([ str(ofield) for ofield in ofields ]))
+            #print('\t'.join([ str(ofield) for ofield in ofields ]))

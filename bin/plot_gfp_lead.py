@@ -148,13 +148,13 @@ def plot_gfp_fpbase(models):
 if __name__ == '__main__':
     models = [
         'gp',
-        'hybrid',
+        'dhybrid',
         'bayesnn',
         'mlper5g',
         'mlper1',
         'linear',
     ]
 
-    #plot_gfp(models)
+    plot_gfp(models)
 
-    plot_gfp_fpbase(models)
+    #plot_gfp_fpbase(models)
