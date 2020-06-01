@@ -153,7 +153,6 @@ def latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs):
           .format(*ss.spearmanr(dist, var_unk_pred)))
     print('Distance Pearson rho = {}, P = {}'
           .format(*ss.pearsonr(dist, var_unk_pred)))
-    exit()
 
     X = np.vstack([ feature_obs, feature_unk ])
     labels = np.concatenate([
@@ -253,7 +252,7 @@ def predict(**kwargs):
                         regress_type)
 
     # Plot visualization of chemical latent space.
-    latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs)
+    #latent_scatter(var_unk_pred, y_unk_pred, acquisition, **kwargs)
 
     kwargs['y_unk_pred'] = y_unk_pred
     kwargs['var_unk_pred'] = var_unk_pred
