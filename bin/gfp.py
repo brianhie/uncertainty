@@ -259,87 +259,6 @@ def load_fpbase(fname):
     ])
     return X, meta
 
-def gfp_fpbase(model, beta, seed):
-    X, meta = load_embeddings(
-        'data/sarkisyan2016gfp/embeddings.txt'
-    )
-
-    X_train, y_train, X_test, y_test, mutations_test = split_X(
-        X, meta
-    )
-
-    X_val, meta_val = load_fpbase(
-        'data/sarkisyan2016gfp/fpbase_embeddings.txt'
-    )
-
-    plot_stats_fpbase(meta_val)
-
-    regressor = train(model, X_train, y_train, seed=seed)
-    y_unk_pred = regressor.predict(X_val)
-    var_unk_pred = regressor.uncertainties_
-
-    plt.figure()
-    plt.scatter(meta_val.edit, var_unk_pred, alpha=0.3)
-    plt.xlabel('Edit distance')
-    plt.ylabel('Uncertainty')
-    plt.savefig('figures/gfp_edit_uncertainty.png', dpi=300)
-    print('Edit distance vs. uncertainty, '
-          'Spearman r = {}'.format(
-        ss.spearmanr(meta_val.edit, var_unk_pred)
-    ))
-    print('Edit distance vs. uncertainty, '
-          'Pearson rho = {}'.format(
-        ss.pearsonr(meta_val.edit, var_unk_pred)
-    ))
-
-    acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta)
-
-    acq_argsort = np.argsort(-acquisition)
-    for rank, idx in enumerate(acq_argsort):
-        if meta_val.brightness[idx] < 0:
-            continue
-        fields = [
-            rank, meta_val.name[idx], meta_val.brightness[idx]
-        ]
-        print('\t'.join([ str(field) for field in fields ]))
-
-def egfp(model, beta, seed):
-    X, meta = load_embeddings(
-        'data/sarkisyan2016gfp/embeddings.txt'
-    )
-
-    X_train, y_train, _, _, _ = split_X(
-        X, meta
-    )
-
-    X_mut3 = X[meta.n_mut == 3]
-
-    X_fpbase, meta_fpbase = load_fpbase(
-        'data/sarkisyan2016gfp/fpbase_egfp_embeddings.txt'
-    )
-    egfp_idx = list(meta_fpbase.name).index('EGFP')
-    X_egfp = X_fpbase[egfp_idx].reshape(1, -1)
-
-    X_val = np.concatenate([ X_egfp, X_mut3 ])
-
-    regressor = train(model, X_train, y_train, seed=seed)
-    y_unk_pred = regressor.predict(X_val)
-    var_unk_pred = regressor.uncertainties_
-
-    acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta)
-
-    acq_ranks = ss.rankdata(acquisition)
-
-    plt.figure()
-    plt.scatter(acq_ranks, np.zeros(len(acq_ranks)),
-                c='#dddddd', marker='s', alpha=0.1)
-    plt.scatter([ acq_ranks[0] ], [ 0 ],
-                c='red', marker='s', alpha=1.)
-    plt.title('{}, EGFP rank {}'.format(model, acq_ranks[0]))
-    plt.xlim([ -10, 100 ])
-    plt.savefig('figures/egfp_loc_{}.png'.format(model), dpi=300)
-    plt.close()
-
 def gfp_structure(model, beta, seed):
     from Bio import Seq, SeqIO
     gfp_fasta = 'data/sarkisyan2016gfp/avGFP_reference_sequence.fa'
@@ -459,10 +378,6 @@ if __name__ == '__main__':
     else:
         seed = 1
 
-    #gfp_cv(model, beta, seed)
-
-    #gfp_fpbase(model, beta, seed)
-
-    #egfp(model, beta, seed)
+    gfp_cv(model, beta, seed)
 
     gfp_structure(model, beta, seed)
