@@ -310,15 +310,15 @@ def epitome(X, perturb_idx, perturb_type):
         )
     rank_sum = np.zeros(X.shape[0])
     for p_idx in perturb_idx:
-        rank_sum += rankdata(-np.ravel(X[:, p_idx]))
+        rank_sum += ss.rankdata(-np.ravel(X[:, p_idx]))
     return X[np.argsort(rank_sum)[:500]].mean(0)
 
 def compute_transition(X, method):
     if method == 'spearman':
-        trans = spearmanr(X)[0]
+        trans = ss.spearmanr(X)[0]
         trans[np.isnan(trans)] = 0
     elif method == 'pearson':
-        trans = pearsonr(X)[0]
+        trans = ss.pearsonr(X)[0]
         trans[np.isnan(trans)] = 0
     else:
         raise ValueError('Invalid transition method {}'
@@ -425,7 +425,7 @@ def featurize(
     return np.vstack(X_transform)
 
 def acquisition_rank(y_pred, var_pred, beta=1.):
-    return rankdata(y_pred) + (beta * rankdata(-var_pred))
+    return ss.rankdata(y_pred) + (beta * ss.rankdata(-var_pred))
 
 def acquisition_ucb(y_pred, var_pred, beta=1.):
     return y_pred - (beta * var_pred)
