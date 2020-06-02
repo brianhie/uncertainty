@@ -1,4 +1,4 @@
-Bio==1.76
+biopython==1.76
 MulticoreTSNE==0.1
 cmfrec==0.5.3
 fbpca==1.0
@@ -12,6 +12,6 @@ pandas==0.25.1
 scanpy==1.4.5.1
 scipy==1.3.1
 seaborn==0.9.0
-tensorflow==1.15.0
+tensorflow-gpu==1.15.0
 torch==1.4.0
 umap-learn==0.3.10
