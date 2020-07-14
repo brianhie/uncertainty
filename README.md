@@ -1,4 +1,4 @@
-## Code for "Learning with Uncertainty for Biological Discovery and Design"
+## Learning with Uncertainty for Biological Discovery and Design
 
 This repository contains the analysis source code used in the paper.
 
