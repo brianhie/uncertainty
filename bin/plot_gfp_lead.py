@@ -58,7 +58,7 @@ def plot_gfp(models):
         'model', 'uncertainty', 'order', 'brightness', 'seed',
     ])
 
-    n_leads = [ 5, 50, 500, 5000 ]
+    n_leads = [ 50, 500 ]
 
     for n_lead in n_leads:
         df_subset = df[df.order <= n_lead]
@@ -105,50 +105,10 @@ def plot_gfp(models):
     plt.legend(models + [ 'Random guessing' ])
     plt.savefig('figures/gfp_acquisition.svg')
 
-def plot_gfp_fpbase(models):
-    data = []
-    for model in models:
-        fname = ('gfp_fpbase_{}.log'.format(model))
-        data += parse_log(model, fname, brightness_offset=0.,
-                          start_prefix='0\t', end_prefix='174\t')
-
-    df = pd.DataFrame(data, columns=[
-        'model', 'uncertainty', 'order', 'brightness', 'seed',
-    ])
-
-    seeds = sorted(set(df.seed))
-
-    data = []
-    for model in models:
-        for seed in seeds:
-            df_subset = df[(df.model == model) &
-                           (df.seed == seed)]
-            if len(df_subset) == 0:
-                continue
-            uncertainty = set(df_subset.uncertainty).pop()
-            y_true = (np.array(df_subset.brightness).ravel() > 0.) * 1.
-            y_pred = -np.array(df_subset.order).ravel()
-            auroc = roc_auc_score(y_true, y_pred)
-            data.append([ model, uncertainty, auroc, ])
-
-    df_plot = pd.DataFrame(data, columns=[
-        'model', 'uncertainty', 'value',
-    ])
-
-    plt.figure()
-    sns.barplot(x='model', y='value', data=df_plot, ci=None,
-                order=models, hue='uncertainty', dodge=False,
-                palette=sns.color_palette("RdBu", n_colors=8))
-    sns.swarmplot(x='model', y='value', data=df_plot, color='black',
-                  order=models)
-    plt.ylim([ 0., 1. ])
-    plt.savefig('figures/gfp_fpbase_auroc.svg')
-    plt.close()
-
 if __name__ == '__main__':
     models = [
         'gp',
-        'dhybrid',
+        'hybrid',
         'bayesnn',
         'mlper5g',
         'mlper1',
@@ -156,5 +116,3 @@ if __name__ == '__main__':
     ]
 
     plot_gfp(models)
-
-    #plot_gfp_fpbase(models)

@@ -13,11 +13,11 @@ within the same directory as this repository.
 
 ### Dependencies
 
-The major Python package requirements and their tested versions are in [requirements.txt](requirements.txt).
-We used the `edward` package (version 1.3.5) alongside `tensorflow-cpu` (version 1.5.1) in a separate conda environment.
-We also used the RDKit within its own conda environment; download instructions can be found [here](https://www.rdkit.org/docs/Install.html).
+The major Python package requirements and their tested versions are in [requirements.txt](requirements.txt). These are the requirements for most of the experiments below, including for the GP-based models. These experiments were run with Python version 3.7.4 on Ubuntu 18.04.
 
-Our experiments were run with Python version 3.7.4 on Ubuntu 18.04.
+For the Bayesian neural network experiemnts, we used the `edward` package (version 1.3.5) alongside `tensorflow` on a CPU (version 1.5.1) in a separate conda environment. These experiments used Python 3.6.10.
+
+We also used the RDKit (version 2017.09.1) within its own separate conda environment with Python 3.6.10; download instructions can be found [here](https://www.rdkit.org/docs/Install.html).
 
 ### Compound-kinase affinity prediction experiments
 
@@ -25,7 +25,12 @@ Our experiments were run with Python version 3.7.4 on Ubuntu 18.04.
 
 The command for running the cross-validation experiments is
 ```bash
+# Average case metrics.
 bash bin/cv.sh
+# Lead prioritization (all).
+bash bin/exploit.sh
+# Lead prioritization (separated by quadrant).
+bash bin/quad.sh
 ```
 which will launch the CV experiments for various models at different seeds implemented in `bin/train_davis2011kinase.py`.
 

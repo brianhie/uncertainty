@@ -65,10 +65,7 @@ if __name__ == '__main__':
 
     data = []
     for model in models:
-        if model == 'mlper5g':
-            fname = 'iterate_davis2011kinase_mlper5g_exploit100_beta1.log'
-        else:
-            fname = ('iterate_davis2011kinase_{}_exploit.log'.format(model))
+        fname = ('iterate_davis2011kinase_{}_exploit.log'.format(model))
         data += parse_log(model, fname)
 
     df = pd.DataFrame(data, columns=[
@@ -90,7 +87,7 @@ if __name__ == '__main__':
         plt.savefig('figures/benchmark_lead_{}.svg'.format(n_lead))
         plt.close()
 
-        gp_Kds = df_subset[df_subset.model == 'hybrid'].Kd
+        gp_Kds = df_subset[df_subset.model == 'gp'].Kd
         for model in models:
             if model == 'hybrid':
                 continue

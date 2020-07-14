@@ -57,13 +57,17 @@ def select_candidates(point=False, **kwargs):
     n_candidates = kwargs['n_candidates']
     chems = kwargs['chems']
     prots = kwargs['prots']
+    if 'beta' in kwargs:
+        beta = kwargs['beta']
+    else:
+        beta = 20.
 
     if point:
         tprint('Exploiting (using point prediction only)...')
         acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta=0.)
     else:
         tprint('Exploiting...')
-        acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta=20)
+        acquisition = acquisition_rank(y_unk_pred, var_unk_pred, beta=beta)
 
     max_acqs = np.argsort(-acquisition)[:n_candidates]
 
@@ -358,12 +362,15 @@ if __name__ == '__main__':
     parser.add_argument('scheme', help='acquisition strategy')
     parser.add_argument('n_candidates', type=int, help='number to acquire')
     parser.add_argument('--seed', type=int, default=1, help='random seed')
+    parser.add_argument('--beta', type=float, default=1,
+                        help='explore/exploit tradeoff parameter')
     args = parser.parse_args()
 
     param_dict['regress_type'] = args.regress_type
     param_dict['scheme'] = args.scheme
     param_dict['n_candidates'] = args.n_candidates
     param_dict['seed'] = args.seed
+    param_dict['beta'] = args.beta
 
     n_iter = 1
 

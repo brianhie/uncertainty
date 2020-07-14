@@ -224,7 +224,6 @@ def gfp_cv(model, beta, seed):
         ]
         print('\t'.join([ str(field) for field in fields ]))
 
-    #if model == 'gp':
     np.save('target/prediction_cache/gfp_cv_ypred_{}.npy'
             .format(model), y_unk_pred)
     np.save('target/prediction_cache/gfp_cv_varpred_{}.npy'
