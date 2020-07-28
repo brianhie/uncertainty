@@ -31,6 +31,12 @@ if __name__ == '__main__':
             #train2fp[name] = Chem.RDKFingerprint(chem)
             train2fp[name] = GetMorganFingerprintAsBitVect(chem, 2)
             train2common[name] = fields[0]
+    with open('data/prediction_results.txt') as f:
+        for line in f:
+            fields = line.rstrip().split('\t')
+            name = fields[3]
+            train2fp[name] = chem2fp[name]
+            train2common[name] = fields[4]
 
     seen_predict = set()
     with open(sys.argv[1]) as f:
