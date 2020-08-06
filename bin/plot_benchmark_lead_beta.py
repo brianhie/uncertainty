@@ -3,7 +3,7 @@ from utils import *
 import pandas as pd
 import seaborn as sns
 
-def parse_log(model, fname):
+def parse_log(model, fname, beta):
     data = []
     reseed = -1
     lead_num = 0
@@ -44,7 +44,7 @@ def parse_log(model, fname):
                 prot_name = fields[4]
 
                 data.append([
-                    model, Kd, lead_num, reseed, uncertainty,
+                    model, beta, Kd, lead_num, reseed, uncertainty,
                     chem_name, prot_name, chem_idx, prot_idx
                 ])
 
@@ -59,41 +59,50 @@ if __name__ == '__main__':
         'hybrid',
         'bayesnn',
         'mlper5g',
-        'mlper1',
-        'cmf',
+    ]
+
+    betas = [
+        '0.0', '1',
     ]
 
     data = []
     for model in models:
-        fname = ('iterate_davis2011kinase_{}_exploit.log'.format(model))
-        data += parse_log(model, fname)
+        for beta in betas:
+            fname = ('iterate_davis2011kinase_{}_exploit_beta{}.log'
+                     .format(model, beta))
+            data += parse_log(model, fname, beta)
 
     df = pd.DataFrame(data, columns=[
-        'model', 'Kd', 'lead_num', 'seed', 'uncertainty',
+        'model', 'beta', 'Kd', 'lead_num', 'seed', 'uncertainty',
         'chem_name', 'prot_name', 'chem_idx', 'prot_idx',
     ])
 
     n_leads = [ 5, 25 ]
 
     for n_lead in n_leads:
-        df_subset = df[df.lead_num < n_lead]
-
-        plt.figure()
-        sns.barplot(x='model', y='Kd', data=df_subset, ci=95,
-                    order=models, hue='uncertainty', dodge=False,
-                    palette=sns.color_palette("RdBu", n_colors=8,),
-                    capsize=0.2,)
-        plt.ylim([ -100, 10100 ])
-        plt.savefig('figures/benchmark_lead_{}.svg'.format(n_lead))
-        plt.close()
-
-        gp_Kds = df_subset[df_subset.model == 'gp'].Kd
         for model in models:
-            if model == 'hybrid':
-                continue
-            other_Kds = df_subset[df_subset.model == model].Kd
-            print('{} leads, t-test, GP vs {}:'.format(n_lead, model))
-            print('\tt = {:.4f}, P = {:.4g}'
-                  .format(*ss.ttest_ind(gp_Kds, other_Kds,
-                                        equal_var=False)))
-        print('')
+            df_subset = df[(df.lead_num < n_lead) &
+                           (df.model == model)]
+
+            plt.figure()
+            sns.barplot(x='beta', y='Kd', data=df_subset, ci=95,
+                        order=betas, dodge=False, capsize=0.2,)
+            plt.ylim([ -100, 10100 ])
+            plt.savefig('figures/benchmark_lead_beta_{}_{}.svg'
+                        .format(model, n_lead))
+            plt.close()
+
+            base_Kds = df_subset[df_subset.beta == '0.0'].Kd
+            for beta in betas:
+                if beta == '0.0':
+                    continue
+                other_Kds = df_subset[df_subset.beta == beta].Kd
+                t, p = ss.ttest_ind(base_Kds, other_Kds,
+                                    equal_var=False)
+                if t < 0:
+                    p = 1. - p / 2.
+                else:
+                    p = p / 2.
+                print('{} leads, t-test, {}:'.format(n_lead, model))
+                print('\tt = {:.4f}, P = {:.4g}'.format(t, p))
+                print('')

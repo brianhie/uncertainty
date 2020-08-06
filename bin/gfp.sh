@@ -1,19 +1,24 @@
+betas=(0.0 0.05 1 20)
+
 for seed in {1..5}
 do
-    echo -e "GFP Seed:\t"$seed >> gfp_gp.log
-    python bin/gfp.py gp 1 $seed >> gfp_gp.log
+    for b in ${betas[@]}
+    do
+        echo -e "GFP Seed:\t"$seed >> gfp_gp.log
+        python bin/gfp.py gp 1 $seed >> gfp_gp.log
 
-    echo -e "GFP Seed:\t"$seed >> gfp_linear.log
-    python bin/gfp.py linear 0 $seed >> gfp_linear.log
+        echo -e "GFP Seed:\t"$seed >> gfp_linear.log
+        python bin/gfp.py linear 0 $seed >> gfp_linear.log
 
-    echo -e "GFP Seed:\t"$seed >> gfp_hybrid.log
-    python bin/gfp.py hybrid 1 $seed >> gfp_hybrid.log
+        echo -e "GFP Seed:\t"$seed >> gfp_hybrid.log
+        python bin/gfp.py hybrid 1 $seed >> gfp_hybrid.log
 
-    echo -e "GFP Seed:\t"$seed >> gfp_mlper5g.log
-    python bin/gfp.py mlper5g 1 $seed >> gfp_mlper5g.log
+        echo -e "GFP Seed:\t"$seed >> gfp_mlper5g.log
+        python bin/gfp.py mlper5g 1 $seed >> gfp_mlper5g.log
 
-    echo -e "GFP Seed:\t"$seed >> gfp_mlper1.log
-    python bin/gfp.py mlper1 0 $seed >> gfp_mlper1.log
+        echo -e "GFP Seed:\t"$seed >> gfp_mlper1.log
+        python bin/gfp.py mlper1 0 $seed >> gfp_mlper1.log
+    done
 done
 
 source activate edward
