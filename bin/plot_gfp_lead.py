@@ -4,7 +4,7 @@ import pandas as pd
 import seaborn as sns
 from sklearn.metrics import roc_auc_score
 
-def parse_log(model, fname, brightness_offset=3.,
+def parse_log(model, fname, beta, brightness_offset=3.,
               start_prefix='0\tS', end_prefix='39899\tS'):
     data = []
 
@@ -40,7 +40,7 @@ def parse_log(model, fname, brightness_offset=3.,
                 rank = int(fields[0]) + 1
                 brightness = float(fields[-1]) + brightness_offset
                 data.append([
-                    model, uncertainty, rank, brightness, seed,
+                    model, uncertainty, beta, rank, brightness, seed,
                 ])
 
             if line.startswith(end_prefix):
@@ -52,16 +52,20 @@ def plot_gfp(models):
     data = []
     for model in models:
         fname = ('gfp_{}.log'.format(model))
-        data += parse_log(model, fname)
+        data += parse_log(model, fname, 1)
+    for model in [ 'gp', 'hybrid', 'bayesnn', 'mlper5g' ]:
+        fname = ('gfp_{}_exploit0.0.log'.format(model))
+        data += parse_log(model, fname, 0)
 
     df = pd.DataFrame(data, columns=[
-        'model', 'uncertainty', 'order', 'brightness', 'seed',
+        'model', 'uncertainty', 'beta', 'order', 'brightness', 'seed',
     ])
 
     n_leads = [ 50, 500 ]
 
     for n_lead in n_leads:
-        df_subset = df[df.order <= n_lead]
+        df_subset = df[(df.order <= n_lead) &
+                       (df.beta == 1)]
 
         plt.figure()
         sns.barplot(x='model', y='brightness', data=df_subset, ci=95,
@@ -83,10 +87,20 @@ def plot_gfp(models):
                                         equal_var=False)))
         print('')
 
+    for model in [ 'gp', 'hybrid', 'bayesnn', 'mlper5g' ]:
+        df_subset = df[(df.order <= 50) & (df.model == model)]
+        plt.figure()
+        sns.barplot(x='beta', y='brightness', data=df_subset, ci=95,
+                    dodge=False, capsize=0.2,)
+        plt.ylim([ 3., 4. ])
+        plt.savefig('figures/gfp_lead_beta_{}.svg'
+                    .format(model))
+        plt.close()
 
     plt.figure()
     for model in models:
-        df_subset = df[(df.model == model) & (df.seed == 1)]
+        df_subset = df[(df.model == model) & (df.seed == 1) &
+                       (df.beta == 1)]
         order = np.array(df_subset.order).ravel()
         brightness = np.array(df_subset.brightness).ravel()
 

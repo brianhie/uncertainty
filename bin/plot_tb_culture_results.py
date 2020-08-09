@@ -21,9 +21,10 @@ def plot_batch(df, batch):
                   .format(comp, p_1side, len(df_comp)))
 
     plt.figure()
-    sns.barplot(x='comp', y='fluo', data=df_50uM, ci=None, dodge=False,
+    sns.barplot(x='comp', y='fluo', data=df_50uM, ci=95, dodge=False,
                 hue='control', palette=sns.color_palette("RdBu_r", 7),
-                order=[ 'K252a', 'SU11652', 'TG101209', 'RIF', 'DMSO' ])
+                order=[ 'K252a', 'SU11652', 'TG101209', 'RIF', 'DMSO' ],
+                capsize=0.2, errcolor='#888888',)
     sns.swarmplot(x='comp', y='fluo', data=df_50uM, color='black',
                   order=[ 'K252a', 'SU11652', 'TG101209', 'RIF', 'DMSO' ])
     #plt.ylim([ 10, 300000 ])

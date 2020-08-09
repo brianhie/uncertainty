@@ -53,6 +53,27 @@ def parse_log(model, fname):
 
     return data
 
+def parse_log_dgraphdta(model, fname, seed):
+    data = []
+
+    with open(fname) as f:
+        for line in f:
+            line = line.rstrip()
+            if line == 'metrics for  davis_full':
+                f.readline()
+                f.readline()
+                f.readline()
+
+                Kds = [ float(Kd) for Kd in
+                        f.readline().rstrip().split(', ') ]
+                for lead_num, Kd in enumerate(Kds):
+                    data.append([
+                        model, Kd, lead_num, seed, 'No uncertainty',
+                        None, None, None, None
+                    ])
+
+    return data
+
 if __name__ == '__main__':
     models = [
         'gp',
@@ -61,12 +82,19 @@ if __name__ == '__main__':
         'mlper5g',
         'mlper1',
         'cmf',
+        'dgraphdta'
     ]
 
     data = []
     for model in models:
-        fname = ('iterate_davis2011kinase_{}_exploit.log'.format(model))
-        data += parse_log(model, fname)
+        if model == 'dgraphdta':
+            for seed in range(5):
+                fname = ('../DGraphDTA/iterate_davis2011kinase_dgraphdta_'
+                         'seed{}.log'.format(seed))
+                data += parse_log_dgraphdta(model, fname, seed)
+        else:
+            fname = ('iterate_davis2011kinase_{}_exploit.log'.format(model))
+            data += parse_log(model, fname)
 
     df = pd.DataFrame(data, columns=[
         'model', 'Kd', 'lead_num', 'seed', 'uncertainty',

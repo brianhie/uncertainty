@@ -47,7 +47,7 @@ def split_X(X, meta):
     mutations_test = []
     for i in range(X.shape[0]):
         n_mut = meta.n_mut[i]
-        if n_mut > 2:
+        if n_mut > 1:
             X_test.append(X[i])
             y_test.append(meta.brightness[i])
             mutations_test.append(meta.mutations[i])

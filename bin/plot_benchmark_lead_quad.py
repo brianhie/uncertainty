@@ -61,6 +61,39 @@ def parse_log(model, fname):
 
     return data
 
+
+def parse_log_dgraphdta(model, fname, seed):
+    data = []
+
+    with open(fname) as f:
+        for line in f:
+            line = line.rstrip()
+            if line.startswith('metrics for  davis_full'):
+                if line.endswith('davis_full'):
+                    continue
+                elif line.endswith('(quadA)'):
+                    quadrant = 'side'
+                elif line.endswith('(quadB)'):
+                    quadrant = 'repurpose'
+                elif line.endswith('(quadC)'):
+                    quadrant = 'novel'
+                else:
+                    raise ValueError('Invalid line {}'.format(line))
+
+                f.readline()
+                f.readline()
+                f.readline()
+
+                Kds = [ float(Kd) for Kd in
+                        f.readline().rstrip().split(', ') ]
+                for lead_num, Kd in enumerate(Kds):
+                    data.append([
+                        model, Kd, lead_num, seed, 'No uncertainty',
+                        None, None, None, None, quadrant,
+                    ])
+
+    return data
+
 if __name__ == '__main__':
     models = [
         'gp',
@@ -69,13 +102,19 @@ if __name__ == '__main__':
         'mlper5g',
         'mlper1',
         'cmf',
+        'dgraphdta'
     ]
 
     data = []
     for model in models:
-        fname = ('iterate_davis2011kinase_{}_quad.log'.format(model))
-        print(fname)
-        data += parse_log(model, fname)
+        if model == 'dgraphdta':
+            for seed in range(5):
+                fname = ('../DGraphDTA/iterate_davis2011kinase_dgraphdta_'
+                         'seed{}.log'.format(seed))
+                data += parse_log_dgraphdta(model, fname, seed)
+        else:
+            fname = ('iterate_davis2011kinase_{}_quad.log'.format(model))
+            data += parse_log(model, fname)
 
     df = pd.DataFrame(data, columns=[
         'model', 'Kd', 'lead_num', 'seed', 'uncertainty',
@@ -88,7 +127,7 @@ if __name__ == '__main__':
         print('--------------------')
         print('Quadrant: {}'.format(quadrant))
 
-        n_leads = [ 50, ]
+        n_leads = [ 5, 25 ]
         for n_lead in n_leads:
             df_subset = df[
                 (df.lead_num < n_lead) & (df.quadrant == quadrant)
@@ -104,9 +143,9 @@ if __name__ == '__main__':
                         .format(quadrant, n_lead))
             plt.close()
 
-            gp_Kds = df_subset[df_subset.model == 'gp'].Kd
+            gp_Kds = df_subset[df_subset.model == 'hybrid'].Kd
             for model in models:
-                if model == 'gp':
+                if model == 'hybrid':
                     continue
                 other_Kds = df_subset[df_subset.model == model].Kd
                 print('{} leads, t-test, GP vs {}:'.format(n_lead, model))

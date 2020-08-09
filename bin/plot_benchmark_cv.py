@@ -26,7 +26,9 @@ def parse_log(model, fname):
 
             [ quadrant, log_body ] = log_body.split(': ')
 
-            if metric == 'MAE' or metric == 'MSE':
+            if metric == 'MAE':
+                continue
+            elif metric == 'MSE':
                 value = float(log_body)
             elif metric == 'Pearson rho':
                 value = float(log_body.strip('()').split(',')[0])
@@ -39,6 +41,38 @@ def parse_log(model, fname):
 
     return data
 
+def parse_log_dgraphdta(model, fname):
+    data = []
+
+    with open(fname) as f:
+        for line in f:
+            line = line.rstrip()
+            if line.startswith('metrics for  davis_full'):
+                if line.endswith('davis_full'):
+                    quadrant = 'unknown_all'
+                elif line.endswith('(quadA)'):
+                    quadrant = 'unknown_side'
+                elif line.endswith('(quadB)'):
+                    quadrant = 'unknown_repurpose'
+                elif line.endswith('(quadC)'):
+                    quadrant = 'unknown_novel'
+                else:
+                    raise ValueError('Invalid line {}'.format(line))
+
+                value = float(f.readline().rstrip().split()[-1])
+                data.append([ model, 'MSE', quadrant, value,
+                              'No uncertainty' ])
+
+                value = float(f.readline().rstrip().split()[-1])
+                data.append([ model, 'Pearson rho', quadrant, value,
+                              'No uncertainty' ])
+
+                value = float(f.readline().rstrip().split()[-1])
+                data.append([ model, 'Spearman r', quadrant, value,
+                              'No uncertainty' ])
+
+    return data
+
 if __name__ == '__main__':
     models = [
         'gp',
@@ -47,12 +81,19 @@ if __name__ == '__main__':
         'mlper5g',
         'mlper1',
         'cmf',
+        'dgraphdta'
     ]
 
     data = []
     for model in models:
-        fname = 'train_davis2011kinase_{}.log'.format(model)
-        data += parse_log(model, fname)
+        if model == 'dgraphdta':
+            for seed in range(5):
+                fname = ('../DGraphDTA/iterate_davis2011kinase_dgraphdta_'
+                         'seed{}.log'.format(seed))
+                data += parse_log_dgraphdta(model, fname)
+        else:
+            fname = 'target/log/train_davis2011kinase_{}.log'.format(model)
+            data += parse_log(model, fname)
 
     df = pd.DataFrame(data, columns=[
         'model', 'metric', 'quadrant', 'value', 'uncertainty',
@@ -64,7 +105,8 @@ if __name__ == '__main__':
     for quadrant in quadrants:
         for metric in metrics:
 
-            df_subset = df[df.metric == metric][df.quadrant == quadrant]
+            df_subset = df[(df.metric == metric) &
+                           (df.quadrant == quadrant)]
 
             plt.figure()
             sns.barplot(x='model', y='value', data=df_subset, ci=None,

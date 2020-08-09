@@ -40,8 +40,8 @@ def plot_batch(df, batch):
               .format(comp, p_1side, len(df_comp)))
 
     plt.figure()
-    sns.barplot(x='comp', y='fluo', data=df_50uM, ci=None, dodge=False,
-                hue='control',
+    sns.barplot(x='comp', y='fluo', data=df_50uM, ci=95, dodge=False,
+                hue='control', capsize=0.2, errcolor='#888888',
                 palette=sns.diverging_palette(10, 220, sep=80, n=7),
                 order=[ 'K252a', 'SU11652', 'RIF', 'DMSO' ])
     sns.swarmplot(x='comp', y='fluo', data=df_50uM, color='black',
