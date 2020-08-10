@@ -29,13 +29,16 @@ if __name__ == '__main__':
     plt.figure()
 
 
-    for pidx in range(3):
+    for pidx in range(4):
+        if pidx == 3:
+            X = np.vstack([ X, np.array([4.8, 5.5]).reshape(-1, 1) ])
+
         y = f(X).ravel()
 
         if pidx == 1:
             dy = 1
-        if pidx == 2:
-            dy = 20 + 1.0 * np.random.random(y.shape)
+        if pidx >= 2:
+            dy = 10 + 1.0 * np.random.random(y.shape)
             noise = np.random.normal(0, dy)
             y += noise
 
@@ -58,20 +61,20 @@ if __name__ == '__main__':
 
         # Plot the function, the prediction and the 95% confidence interval based on
         # the MSE
-        plt.subplot(3, 1, pidx + 1)
+        plt.subplot(4, 1, pidx + 1)
         plt.plot(x, f(x), 'r:', label=r'$f(x) = x\,\sin(x)$')
-        plt.plot(x, y_pred, '#0269A4', label='Prediction')
+        plt.plot(x, y_pred, '#A5D1EC', label='Prediction')
         if pidx == 1:
             plt.fill(np.concatenate([x, x[::-1]]),
                      np.concatenate([y_pred - sigma,
                                      (y_pred + sigma)[::-1]]),
                      alpha=0.3, fc='#90D9EE', ec='None', label='95% confidence interval')
-        elif pidx == 2:
+        elif pidx >= 2:
             plt.fill(np.concatenate([x, x[::-1]]),
                      np.concatenate([y_pred - 1.5 * sigma,
                                      (y_pred + 1.5 * sigma)[::-1]]),
                      alpha=0.3, fc='#90D9EE', ec='None', label='95% confidence interval')
-        plt.scatter(X.ravel(), y, color='#011B56', label='Observations', s=1,)
+        plt.scatter(X.ravel(), y, color='#011B56', label='Observations', s=3,)
         plt.xlabel('$x$')
         plt.ylabel('$f(x)$')
         plt.ylim(-60, 60)
