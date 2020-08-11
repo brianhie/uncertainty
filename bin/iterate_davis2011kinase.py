@@ -78,9 +78,9 @@ def select_candidates(point=False, **kwargs):
 
         if y_unk is None:
             tprint('\tAcquire {} {} <--> {} with predicted Kd value {:.3f}'
-                   ' and variance {:.3f}'
+                   ' and uncertainty {:.3f}'
                    .format((i, j), chem, prot, y_unk_pred[max_acq],
-                           var_unk_pred[max_acq]))
+                           var_unk_pred[max_acq]**2))
         else:
             tprint('\tAcquire {} {} <--> {} with real Kd value {}'
                    .format((i, j), chem, prot, y_unk[max_acq]))
@@ -174,9 +174,9 @@ def select_candidates_per_protein(**kwargs):
 
             if y_unk is None:
                 tprint('\tAcquire {} {} <--> {} with predicted Kd value {:.3f}'
-                       ' and variance {:.3f}'
+                       ' and uncertainty {:.3f}'
                        .format((i, j), chem, prot, y_unk_pred[involves_prot][max_acq],
-                               var_unk_pred[involves_prot][max_acq]))
+                               var_unk_pred[involves_prot][max_acq]**2))
             else:
                 tprint('\tAcquire {} {} <--> {} with real Kd value {}'
                        .format((i, j), chem, prot, y_unk[involves_prot][max_acq]))
@@ -241,9 +241,9 @@ def select_candidates_per_partition(**kwargs):
         tprint('Partition {}'.format(pi))
         if y_unk is None:
             tprint('\tAcquire {} {} <--> {} with predicted Kd value {:.3f}'
-                   ' and variance {:.3f}'
+                   ' and uncertainty {:.3f}'
                    .format((i, j), chem, prot, y_unk_pred[partition[pi]][max_acq],
-                           var_unk_pred[partition[pi]][max_acq]))
+                           var_unk_pred[partition[pi]][max_acq]**2))
         else:
             tprint('\tAcquire {} {} <--> {} with real Kd value {}'
                    .format((i, j), chem, prot, y_unk[partition[pi]][max_acq]))
