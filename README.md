@@ -67,3 +67,10 @@ Experiments testing out-of-distribution prediction of avGFP fluorescence can be 
 ```bash
 bash bin/gfp.sh
 ```
+
+### Gene imputation experiments
+
+Experiments testing out-of-distribution imputation can be launched by
+```bash
+bash bin/dataset_norman2019_k562.sh
+```

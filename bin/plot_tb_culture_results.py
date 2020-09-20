@@ -13,20 +13,26 @@ def plot_batch(df, batch):
 
     if batch.startswith('Ala'):
         df_dmso = df_50uM[df_50uM.comp == 'DMSO']
-        for comp in [ 'K252a', 'SU11652', 'TG101209', 'RIF', ]:
+        for comp in [ 'K252a', 'SU11652', 'TG101209', 'RIF', 'IKK16' ]:
             df_comp = df_50uM[df_50uM.comp == comp]
             t, p_2side = ss.ttest_ind(df_comp.fluo, df_dmso.fluo)
             p_1side = p_2side / 2. if t < 0 else 1. - (p_2side / 2.)
             print('{}, one-sided t-test P = {}, n = {}'
                   .format(comp, p_1side, len(df_comp)))
 
+    if batch == 'AlaA':
+        order = [ 'K252a', 'SU11652', 'TG101209', 'RIF', 'DMSO' ]
+    elif batch == 'AlaB':
+        order = [ 'IKK16', 'K252a', 'RIF', 'DMSO' ]
+    else:
+        return
+
     plt.figure()
     sns.barplot(x='comp', y='fluo', data=df_50uM, ci=95, dodge=False,
                 hue='control', palette=sns.color_palette("RdBu_r", 7),
-                order=[ 'K252a', 'SU11652', 'TG101209', 'RIF', 'DMSO' ],
-                capsize=0.2, errcolor='#888888',)
+                order=order, capsize=0.2, errcolor='#888888',)
     sns.swarmplot(x='comp', y='fluo', data=df_50uM, color='black',
-                  order=[ 'K252a', 'SU11652', 'TG101209', 'RIF', 'DMSO' ])
+                  order=order)
     #plt.ylim([ 10, 300000 ])
     if not batch.startswith('Ala'):
         plt.yscale('log')
@@ -39,9 +45,7 @@ def plot_batch(df, batch):
     concentrations = sorted(set(df.conc))
 
     plt.figure(figsize=(24, 6))
-    for cidx, comp in enumerate([
-            'K252a', 'SU11652', 'TG101209', 'RIF', 'DMSO'
-    ]):
+    for cidx, comp in enumerate(order):
         df_subset = df[df.comp == comp]
 
         plt.subplot(1, 5, cidx + 1)
