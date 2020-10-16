@@ -1,6 +1,6 @@
 ## Learning with Uncertainty for Biological Discovery and Design
 
-This repository contains the analysis source code used in the paper.
+This repository contains the analysis source code used in the paper ["Leveraging uncertainty in machine learning accelerates biological discovery and design"](https://www.cell.com/cell-systems/fulltext/S2405-4712(20)30364-1) by Brian Hie, Bryan Bryson, and Bonnie Berger (Cell Systems, 2020).
 
 ### Data
 
