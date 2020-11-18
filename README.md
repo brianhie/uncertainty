@@ -15,7 +15,7 @@ within the same directory as this repository.
 
 The major Python package requirements and their tested versions are in [requirements.txt](requirements.txt). These are the requirements for most of the experiments below, including for the GP-based models. These experiments were run with Python version 3.7.4 on Ubuntu 18.04.
 
-For the Bayesian neural network experiemnts, we used the `edward` package (version 1.3.5) alongside `tensorflow` on a CPU (version 1.5.1) in a separate conda environment. These experiments used Python 3.6.10.
+For the Bayesian neural network experiments, we used the `edward` package (version 1.3.5) alongside `tensorflow` on a CPU (version 1.5.1) in a separate conda environment. These experiments used Python 3.6.10.
 
 We also used the RDKit (version 2017.09.1) within its own separate conda environment with Python 3.6.10; download instructions can be found [here](https://www.rdkit.org/docs/Install.html).
 
