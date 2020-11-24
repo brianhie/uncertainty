@@ -74,3 +74,7 @@ Experiments testing out-of-distribution imputation can be launched by
 ```bash
 bash bin/dataset_norman2019_k562.sh
 ```
+
+### Troubleshooting
+
+- Changes in the sklearn API in later version may lead to [very different results](https://github.com/brianhie/uncertainty/issues/3) than reported in the paper. See [requirements.txt](requirements.txt) for a list of package version used in our experiments.
