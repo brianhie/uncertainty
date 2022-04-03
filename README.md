@@ -77,4 +77,4 @@ bash bin/dataset_norman2019_k562.sh
 
 ### Troubleshooting
 
-- Changes in the sklearn API in later version may lead to [very different results](https://github.com/brianhie/uncertainty/issues/3) than reported in the paper. See [requirements.txt](requirements.txt) for a list of package version used in our experiments.
+- Changes in the sklearn API in later versions may lead to [very different results](https://github.com/brianhie/uncertainty/issues/3) than reported in the paper. See [requirements.txt](requirements.txt) for a list of the package versions used in our experiments.
