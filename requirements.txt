@@ -5,7 +5,7 @@ cmfrec==0.5.3
 fbpca==1.0
 geosketch==1.0
 gpytorch==1.0.1
-joblib==0.13.2
+joblib==1.2.0
 keras==2.3.1
 matplotlib==3.1.1
 numpy==1.17.2
